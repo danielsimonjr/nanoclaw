@@ -252,9 +252,17 @@ describe('rebase', () => {
     );
 
     // Create a fake resolution cache entry
-    const resDir = path.join(tmpDir, '.nanoclaw', 'resolutions', 'skill-a+skill-b');
+    const resDir = path.join(
+      tmpDir,
+      '.nanoclaw',
+      'resolutions',
+      'skill-a+skill-b',
+    );
     fs.mkdirSync(resDir, { recursive: true });
-    fs.writeFileSync(path.join(resDir, 'meta.yaml'), 'skills: [skill-a, skill-b]\n');
+    fs.writeFileSync(
+      path.join(resDir, 'meta.yaml'),
+      'skills: [skill-a, skill-b]\n',
+    );
 
     writeState(tmpDir, {
       skills_system_version: '0.1.0',
@@ -355,10 +363,7 @@ describe('rebase', () => {
     // Set up current base — short file so changes overlap
     const baseDir = path.join(tmpDir, '.nanoclaw', 'base');
     fs.mkdirSync(path.join(baseDir, 'src'), { recursive: true });
-    fs.writeFileSync(
-      path.join(baseDir, 'src', 'index.ts'),
-      'const x = 1;\n',
-    );
+    fs.writeFileSync(path.join(baseDir, 'src', 'index.ts'), 'const x = 1;\n');
 
     // Working tree: skill replaces the same line
     fs.mkdirSync(path.join(tmpDir, 'src'), { recursive: true });

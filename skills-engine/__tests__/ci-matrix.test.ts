@@ -12,7 +12,9 @@ import {
 import { SkillManifest } from '../types.js';
 import { createTempDir, cleanup } from './test-helpers.js';
 
-function makeManifest(overrides: Partial<SkillManifest> & { skill: string }): SkillManifest {
+function makeManifest(
+  overrides: Partial<SkillManifest> & { skill: string },
+): SkillManifest {
   return {
     version: '1.0.0',
     description: 'Test skill',
@@ -29,8 +31,16 @@ describe('ci-matrix', () => {
   describe('computeOverlapMatrix', () => {
     it('detects overlap from shared modifies entries', () => {
       const skills: SkillOverlapInfo[] = [
-        { name: 'telegram', modifies: ['src/config.ts', 'src/index.ts'], npmDependencies: [] },
-        { name: 'discord', modifies: ['src/config.ts', 'src/router.ts'], npmDependencies: [] },
+        {
+          name: 'telegram',
+          modifies: ['src/config.ts', 'src/index.ts'],
+          npmDependencies: [],
+        },
+        {
+          name: 'discord',
+          modifies: ['src/config.ts', 'src/router.ts'],
+          npmDependencies: [],
+        },
       ];
 
       const matrix = computeOverlapMatrix(skills);
@@ -43,8 +53,16 @@ describe('ci-matrix', () => {
 
     it('returns no entry for non-overlapping skills', () => {
       const skills: SkillOverlapInfo[] = [
-        { name: 'telegram', modifies: ['src/telegram.ts'], npmDependencies: ['grammy'] },
-        { name: 'discord', modifies: ['src/discord.ts'], npmDependencies: ['discord.js'] },
+        {
+          name: 'telegram',
+          modifies: ['src/telegram.ts'],
+          npmDependencies: ['grammy'],
+        },
+        {
+          name: 'discord',
+          modifies: ['src/discord.ts'],
+          npmDependencies: ['discord.js'],
+        },
       ];
 
       const matrix = computeOverlapMatrix(skills);
@@ -54,8 +72,16 @@ describe('ci-matrix', () => {
 
     it('detects overlap from shared npm dependencies', () => {
       const skills: SkillOverlapInfo[] = [
-        { name: 'skill-a', modifies: ['src/a.ts'], npmDependencies: ['lodash', 'zod'] },
-        { name: 'skill-b', modifies: ['src/b.ts'], npmDependencies: ['zod', 'express'] },
+        {
+          name: 'skill-a',
+          modifies: ['src/a.ts'],
+          npmDependencies: ['lodash', 'zod'],
+        },
+        {
+          name: 'skill-b',
+          modifies: ['src/b.ts'],
+          npmDependencies: ['zod', 'express'],
+        },
       ];
 
       const matrix = computeOverlapMatrix(skills);
@@ -68,8 +94,16 @@ describe('ci-matrix', () => {
 
     it('reports both modifies and npm overlap in one entry', () => {
       const skills: SkillOverlapInfo[] = [
-        { name: 'skill-a', modifies: ['src/config.ts'], npmDependencies: ['zod'] },
-        { name: 'skill-b', modifies: ['src/config.ts'], npmDependencies: ['zod'] },
+        {
+          name: 'skill-a',
+          modifies: ['src/config.ts'],
+          npmDependencies: ['zod'],
+        },
+        {
+          name: 'skill-b',
+          modifies: ['src/config.ts'],
+          npmDependencies: ['zod'],
+        },
       ];
 
       const matrix = computeOverlapMatrix(skills);
@@ -82,7 +116,11 @@ describe('ci-matrix', () => {
     it('handles three skills with pairwise overlaps', () => {
       const skills: SkillOverlapInfo[] = [
         { name: 'a', modifies: ['src/config.ts'], npmDependencies: [] },
-        { name: 'b', modifies: ['src/config.ts', 'src/router.ts'], npmDependencies: [] },
+        {
+          name: 'b',
+          modifies: ['src/config.ts', 'src/router.ts'],
+          npmDependencies: [],
+        },
         { name: 'c', modifies: ['src/router.ts'], npmDependencies: [] },
       ];
 
@@ -164,7 +202,11 @@ describe('ci-matrix', () => {
       cleanup(tmpDir);
     });
 
-    function createManifestDir(skillsDir: string, name: string, manifest: Record<string, unknown>): void {
+    function createManifestDir(
+      skillsDir: string,
+      name: string,
+      manifest: Record<string, unknown>,
+    ): void {
       const dir = path.join(skillsDir, name);
       fs.mkdirSync(dir, { recursive: true });
       fs.writeFileSync(path.join(dir, 'manifest.yaml'), stringify(manifest));

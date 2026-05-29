@@ -90,6 +90,27 @@ export function isHostMode(): boolean {
 }
 
 /**
+ * The runtime command to pass to child_process.spawn(). On Windows a bare name
+ * is not reliably resolved without a shell, so resolve it to the full `.exe`
+ * path (which spawn handles safely even with spaces, since no shell is used).
+ * On POSIX the bare name is returned unchanged.
+ */
+export function getContainerSpawnCommand(): string {
+  if (process.platform !== 'win32' || !resolved.bin) {
+    return CONTAINER_RUNTIME_BIN;
+  }
+  try {
+    const out = execSync(`where ${resolved.bin}`, { encoding: 'utf-8' })
+      .trim()
+      .split(/\r?\n/)[0]
+      ?.trim();
+    return out || CONTAINER_RUNTIME_BIN;
+  } catch {
+    return CONTAINER_RUNTIME_BIN;
+  }
+}
+
+/**
  * Normalize a host path for the runtime's `-v` flag. On Windows the source must
  * use forward slashes (e.g. `C:/Users/me`) so the runtime's volume parser
  * recognizes the drive letter and does not choke on backslashes; the single

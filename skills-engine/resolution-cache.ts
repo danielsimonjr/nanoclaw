@@ -3,7 +3,11 @@ import fs from 'fs';
 import path from 'path';
 import { parse, stringify } from 'yaml';
 
-import { NANOCLAW_DIR, RESOLUTIONS_DIR, SHIPPED_RESOLUTIONS_DIR } from './constants.js';
+import {
+  NANOCLAW_DIR,
+  RESOLUTIONS_DIR,
+  SHIPPED_RESOLUTIONS_DIR,
+} from './constants.js';
 import { computeFileHash } from './state.js';
 import { FileInputHashes, ResolutionMeta } from './types.js';
 
@@ -85,7 +89,9 @@ export function loadResolutions(
     // Verify file_hashes — skip pair if hashes don't match
     const expected = meta.file_hashes?.[relPath];
     if (!expected) {
-      console.log(`resolution-cache: skipping ${relPath} — no file_hashes in meta`);
+      console.log(
+        `resolution-cache: skipping ${relPath} — no file_hashes in meta`,
+      );
       continue;
     }
 
@@ -93,8 +99,14 @@ export function loadResolutions(
     const currentPath = path.join(projectRoot, relPath);
     const skillModifyPath = path.join(skillDir, 'modify', relPath);
 
-    if (!fs.existsSync(basePath) || !fs.existsSync(currentPath) || !fs.existsSync(skillModifyPath)) {
-      console.log(`resolution-cache: skipping ${relPath} — input files not found`);
+    if (
+      !fs.existsSync(basePath) ||
+      !fs.existsSync(currentPath) ||
+      !fs.existsSync(skillModifyPath)
+    ) {
+      console.log(
+        `resolution-cache: skipping ${relPath} — input files not found`,
+      );
       continue;
     }
 
@@ -106,13 +118,17 @@ export function loadResolutions(
 
     const currentHash = computeFileHash(currentPath);
     if (currentHash !== expected.current) {
-      console.log(`resolution-cache: skipping ${relPath} — current hash mismatch`);
+      console.log(
+        `resolution-cache: skipping ${relPath} — current hash mismatch`,
+      );
       continue;
     }
 
     const skillHash = computeFileHash(skillModifyPath);
     if (skillHash !== expected.skill) {
-      console.log(`resolution-cache: skipping ${relPath} — skill hash mismatch`);
+      console.log(
+        `resolution-cache: skipping ${relPath} — skill hash mismatch`,
+      );
       continue;
     }
 
@@ -146,7 +162,12 @@ export function loadResolutions(
  */
 export function saveResolution(
   skills: string[],
-  files: { relPath: string; preimage: string; resolution: string; inputHashes: FileInputHashes }[],
+  files: {
+    relPath: string;
+    preimage: string;
+    resolution: string;
+    inputHashes: FileInputHashes;
+  }[],
   meta: Partial<ResolutionMeta>,
   projectRoot: string,
 ): void {
@@ -236,10 +257,15 @@ function findPreimagePairs(
 
     if (entry.isDirectory()) {
       pairs.push(...findPreimagePairs(fullPath, baseDir));
-    } else if (entry.name.endsWith('.preimage') && !entry.name.endsWith('.preimage.hash')) {
+    } else if (
+      entry.name.endsWith('.preimage') &&
+      !entry.name.endsWith('.preimage.hash')
+    ) {
       const resolutionPath = fullPath.replace(/\.preimage$/, '.resolution');
       if (fs.existsSync(resolutionPath)) {
-        const relPath = path.relative(baseDir, fullPath).replace(/\.preimage$/, '');
+        const relPath = path
+          .relative(baseDir, fullPath)
+          .replace(/\.preimage$/, '');
         pairs.push({ relPath, preimage: fullPath, resolution: resolutionPath });
       }
     }
@@ -252,7 +278,10 @@ function findPreimagePairs(
  * Find the rerere hash for a given preimage by scanning rr-cache entries.
  * Returns the directory name (hash) whose preimage matches the given content.
  */
-function findRerereHash(rrCacheDir: string, preimageContent: string): string | null {
+function findRerereHash(
+  rrCacheDir: string,
+  preimageContent: string,
+): string | null {
   if (!fs.existsSync(rrCacheDir)) return null;
 
   for (const entry of fs.readdirSync(rrCacheDir, { withFileTypes: true })) {

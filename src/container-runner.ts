@@ -16,11 +16,12 @@ import {
   TIMEZONE,
 } from './config.js';
 import { readEnvFile } from './env.js';
+import { syncDirIfChanged } from './fs-sync.js';
 import { resolveGroupFolderPath, resolveGroupIpcPath } from './group-folder.js';
 import { logger } from './logger.js';
 import {
-  CONTAINER_RUNTIME_BIN,
   bindMountArgs,
+  getContainerSpawnCommand,
   isHostMode,
   stopContainer,
 } from './container-runtime.js';
@@ -165,7 +166,9 @@ function buildVolumeMounts(
 
   // Copy agent-runner source into a per-group writable location so agents
   // can customize it (add tools, change behavior) without affecting other
-  // groups. Recompiled on container startup via entrypoint.sh.
+  // groups. Recompiled on container startup via entrypoint.sh. The copy is
+  // refreshed whenever the upstream source changes (e.g. after /update) so
+  // bug fixes and new tools propagate to existing groups.
   const agentRunnerSrc = path.join(
     projectRoot,
     'container',
@@ -178,9 +181,7 @@ function buildVolumeMounts(
     group.folder,
     'agent-runner-src',
   );
-  if (!fs.existsSync(groupAgentRunnerDir) && fs.existsSync(agentRunnerSrc)) {
-    fs.cpSync(agentRunnerSrc, groupAgentRunnerDir, { recursive: true });
-  }
+  syncDirIfChanged(agentRunnerSrc, groupAgentRunnerDir);
   mounts.push({
     hostPath: groupAgentRunnerDir,
     containerPath: '/app/src',
@@ -267,7 +268,15 @@ function buildContainerArgs(
  *
  * This mirrors runContainerAgent's stdin/stdout/timeout protocol so the rest
  * of the system is unchanged. NOTE: there is no filesystem isolation in this
- * mode — the additional-mount allowlist does not apply.
+ * mode — the additional-mount allowlist does not apply, and the agent inherits
+ * the orchestrator's environment.
+ *
+ * Host mode runs the shared, prebuilt agent-runner (container/agent-runner/dist)
+ * for all groups. Per-group agent-runner *source* customization (supported in
+ * container mode, which recompiles the mounted per-group copy) is intentionally
+ * not applied here: running it would require replicating the in-container
+ * TypeScript build on the host, which is environment-fragile. All other
+ * per-group state (group folder, .claude config, IPC, skills) is still isolated.
  */
 function runHostAgent(
   group: RegisteredGroup,
@@ -350,8 +359,8 @@ function runHostAgent(
     let stderr = '';
 
     input.secrets = readSecrets();
-    proc.stdin.write(JSON.stringify(input));
-    proc.stdin.end();
+    proc.stdin?.write(JSON.stringify(input));
+    proc.stdin?.end();
     delete input.secrets;
 
     let parseBuffer = '';
@@ -370,13 +379,16 @@ function runHostAgent(
         'Host agent timeout, stopping',
       );
       proc.kill('SIGTERM');
-      setTimeout(() => {
+      // Force-kill if SIGTERM is ignored; unref so this timer never keeps the
+      // event loop alive after the process has already exited.
+      const killTimer = setTimeout(() => {
         try {
           proc.kill('SIGKILL');
         } catch {
           /* already exited */
         }
       }, 5000);
+      killTimer.unref?.();
     };
     let timeout = setTimeout(killOnTimeout, timeoutMs);
     const resetTimeout = () => {
@@ -404,7 +416,14 @@ function runHostAgent(
             if (parsed.newSessionId) newSessionId = parsed.newSessionId;
             hadStreamingOutput = true;
             resetTimeout();
-            outputChain = outputChain.then(() => onOutput(parsed));
+            outputChain = outputChain
+              .then(() => onOutput(parsed))
+              .catch((err) =>
+                logger.error(
+                  { group: group.name, err },
+                  'onOutput handler failed (host)',
+                ),
+              );
           } catch (err) {
             logger.warn(
               { group: group.name, error: err },
@@ -428,6 +447,40 @@ function runHostAgent(
     proc.on('close', (code) => {
       clearTimeout(timeout);
       const duration = Date.now() - startTime;
+
+      // Write a per-run log (parity with container mode). Verbose/error runs
+      // include stdout/stderr; otherwise just a summary.
+      try {
+        const ts = new Date().toISOString().replace(/[:.]/g, '-');
+        const verbose =
+          process.env.LOG_LEVEL === 'debug' ||
+          process.env.LOG_LEVEL === 'trace';
+        const lines = [
+          `=== Host Agent Run Log ===`,
+          `Timestamp: ${new Date().toISOString()}`,
+          `Group: ${group.name}`,
+          `Label: ${label}`,
+          `IsMain: ${input.isMain}`,
+          `Duration: ${duration}ms`,
+          `Exit Code: ${code}`,
+          `Timed Out: ${timedOut}`,
+          ``,
+        ];
+        if (verbose || code !== 0) {
+          lines.push(`=== Stderr ===`, stderr, ``, `=== Stdout ===`, stdout);
+        } else {
+          lines.push(
+            `Prompt length: ${input.prompt.length} chars`,
+            `Session ID: ${input.sessionId || 'new'}`,
+          );
+        }
+        fs.writeFileSync(
+          path.join(logsDir, `host-${ts}.log`),
+          lines.join('\n'),
+        );
+      } catch (err) {
+        logger.warn({ group: group.name, err }, 'Failed to write host run log');
+      }
 
       if (timedOut) {
         if (hadStreamingOutput) {
@@ -548,7 +601,7 @@ export async function runContainerAgent(
   fs.mkdirSync(logsDir, { recursive: true });
 
   return new Promise((resolve) => {
-    const container = spawn(CONTAINER_RUNTIME_BIN, containerArgs, {
+    const container = spawn(getContainerSpawnCommand(), containerArgs, {
       stdio: ['pipe', 'pipe', 'pipe'],
     });
 
@@ -561,8 +614,8 @@ export async function runContainerAgent(
 
     // Pass secrets via stdin (never written to disk or mounted as files)
     input.secrets = readSecrets();
-    container.stdin.write(JSON.stringify(input));
-    container.stdin.end();
+    container.stdin?.write(JSON.stringify(input));
+    container.stdin?.end();
     // Remove secrets from input so they don't appear in logs
     delete input.secrets;
 
@@ -612,7 +665,14 @@ export async function runContainerAgent(
             resetTimeout();
             // Call onOutput for all markers (including null results)
             // so idle timers start even for "silent" query completions.
-            outputChain = outputChain.then(() => onOutput(parsed));
+            outputChain = outputChain
+              .then(() => onOutput(parsed))
+              .catch((err) =>
+                logger.error(
+                  { group: group.name, err },
+                  'onOutput handler failed',
+                ),
+              );
           } catch (err) {
             logger.warn(
               { group: group.name, error: err },

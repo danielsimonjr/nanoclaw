@@ -130,8 +130,10 @@ export async function run(args: string[]): Promise<void> {
   if (buildOk) {
     logger.info('Testing container');
     try {
+      // No stdin pipe needed (entrypoint is /bin/echo); avoids shell-quoting
+      // differences between POSIX shells and Windows cmd.exe.
       const output = execSync(
-        `echo '{}' | ${runCmd} run -i --rm --entrypoint /bin/echo ${image} "Container OK"`,
+        `${runCmd} run -i --rm --entrypoint /bin/echo ${image} "Container OK"`,
         { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] },
       );
       testOk = output.includes('Container OK');

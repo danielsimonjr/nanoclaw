@@ -10,12 +10,44 @@ import { logger } from '../src/logger.js';
 import { isRoot } from './platform.js';
 import { emitStatus } from './status.js';
 
+interface NormalizedAllowlist {
+  allowedRoots: unknown[];
+  blockedPatterns: unknown[];
+  nonMainReadOnly: boolean;
+}
+
+/**
+ * Coerce arbitrary parsed input into the exact shape loadMountAllowlist()
+ * requires (allowedRoots[] + blockedPatterns[] + nonMainReadOnly boolean).
+ * Without this, a file missing blockedPatterns/nonMainReadOnly passes setup but
+ * is silently rejected at load time, disabling all additional mounts.
+ */
+function normalizeAllowlist(parsed: {
+  allowedRoots?: unknown;
+  blockedPatterns?: unknown;
+  nonMainReadOnly?: unknown;
+}): NormalizedAllowlist {
+  return {
+    allowedRoots: Array.isArray(parsed?.allowedRoots)
+      ? parsed.allowedRoots
+      : [],
+    blockedPatterns: Array.isArray(parsed?.blockedPatterns)
+      ? parsed.blockedPatterns
+      : [],
+    // Default to the safe, restrictive value unless explicitly disabled.
+    nonMainReadOnly: parsed?.nonMainReadOnly !== false,
+  };
+}
+
 function parseArgs(args: string[]): { empty: boolean; json: string } {
   let empty = false;
   let json = '';
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--empty') empty = true;
-    if (args[i] === '--json' && args[i + 1]) { json = args[i + 1]; i++; }
+    if (args[i] === '--json' && args[i + 1]) {
+      json = args[i + 1];
+      i++;
+    }
   }
   return { empty, json };
 }
@@ -27,7 +59,9 @@ export async function run(args: string[]): Promise<void> {
   const configFile = path.join(configDir, 'mount-allowlist.json');
 
   if (isRoot()) {
-    logger.warn('Running as root — mount allowlist will be written to root home directory');
+    logger.warn(
+      'Running as root — mount allowlist will be written to root home directory',
+    );
   }
 
   fs.mkdirSync(configDir, { recursive: true });
@@ -62,9 +96,10 @@ export async function run(args: string[]): Promise<void> {
       return; // unreachable but satisfies TS
     }
 
-    fs.writeFileSync(configFile, JSON.stringify(parsed, null, 2) + '\n');
-    allowedRoots = Array.isArray(parsed.allowedRoots) ? parsed.allowedRoots.length : 0;
-    nonMainReadOnly = parsed.nonMainReadOnly === false ? 'false' : 'true';
+    const normalized = normalizeAllowlist(parsed);
+    fs.writeFileSync(configFile, JSON.stringify(normalized, null, 2) + '\n');
+    allowedRoots = normalized.allowedRoots.length;
+    nonMainReadOnly = normalized.nonMainReadOnly ? 'true' : 'false';
   } else {
     // Read from stdin
     logger.info('Reading mount allowlist from stdin');
@@ -86,12 +121,16 @@ export async function run(args: string[]): Promise<void> {
       return;
     }
 
-    fs.writeFileSync(configFile, JSON.stringify(parsed, null, 2) + '\n');
-    allowedRoots = Array.isArray(parsed.allowedRoots) ? parsed.allowedRoots.length : 0;
-    nonMainReadOnly = parsed.nonMainReadOnly === false ? 'false' : 'true';
+    const normalized = normalizeAllowlist(parsed);
+    fs.writeFileSync(configFile, JSON.stringify(normalized, null, 2) + '\n');
+    allowedRoots = normalized.allowedRoots.length;
+    nonMainReadOnly = normalized.nonMainReadOnly ? 'true' : 'false';
   }
 
-  logger.info({ configFile, allowedRoots, nonMainReadOnly }, 'Allowlist configured');
+  logger.info(
+    { configFile, allowedRoots, nonMainReadOnly },
+    'Allowlist configured',
+  );
 
   emitStatus('CONFIGURE_MOUNTS', {
     PATH: configFile,

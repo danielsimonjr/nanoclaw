@@ -145,7 +145,11 @@ environment variables. Use it only where you accept that.
 On Windows 11, the orchestrator runs as a native Node.js process while agents
 run in Linux containers via Docker Desktop's WSL2 backend — enable file sharing
 for the drive holding the project. Setup registers a logon Scheduled Task
-(`schtasks`) instead of launchd/systemd.
+(`schtasks`) instead of launchd/systemd. `better-sqlite3` ships prebuilt
+binaries for Windows x64, so `npm install` works out of the box; on
+unusual setups without a prebuild (e.g. arm64) install the
+[Visual Studio Build Tools](https://visualstudio.microsoft.com/downloads/) so
+the native module can compile.
 
 ## Architecture
 

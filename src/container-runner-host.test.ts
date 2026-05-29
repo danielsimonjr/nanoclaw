@@ -140,5 +140,12 @@ describe('host mode dispatch', () => {
 
     const result = await promise;
     expect(result.status).toBe('success');
+
+    // A per-run host log is written (parity with container mode).
+    const fsMock = (await import('fs')).default;
+    const wroteHostLog = (
+      fsMock.writeFileSync as unknown as ReturnType<typeof vi.fn>
+    ).mock.calls.some((c: unknown[]) => String(c[0]).includes('host-'));
+    expect(wroteHostLog).toBe(true);
   });
 });
