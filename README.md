@@ -54,7 +54,8 @@ Then run `/setup`. Claude Code handles everything: dependencies, authentication,
 - **Main channel** - Your private channel (self-chat) for admin control; every other group is completely isolated
 - **Scheduled tasks** - Recurring jobs that run Claude and can message you back
 - **Web access** - Search and fetch content
-- **Container isolation** - Agents sandboxed in Apple Container (macOS) or Docker (macOS/Linux)
+- **Container isolation** - Agents sandboxed in Apple Container (macOS) or Docker/Podman (macOS/Linux/Windows)
+- **Cross-platform** - Runs on macOS, Linux, and natively on Windows 11 (orchestrator runs natively; agents run in Linux containers via Docker Desktop's WSL2 backend)
 - **Agent Swarms** - Spin up teams of specialized agents that collaborate on complex tasks (first personal AI assistant to support this)
 - **Optional integrations** - Add Gmail (`/add-gmail`) and more via skills
 
