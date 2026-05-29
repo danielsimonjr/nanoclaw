@@ -40,6 +40,8 @@ npm run build        # Compile TypeScript
 ./container/build.sh # Rebuild agent container
 ```
 
+Container runtime is selected via `CONTAINER_RUNTIME` (`auto` default, or `docker`/`podman`/`container`/`host`). `host` runs the agent without a sandbox and requires `container/agent-runner` to be built (`npm install && npm run build` there). Runtime abstraction lives in `src/container-runtime.ts`.
+
 Service management:
 ```bash
 # macOS (launchd)

@@ -22,6 +22,7 @@ import {
   stopContainer,
   ensureContainerRuntimeRunning,
   cleanupOrphans,
+  resolveRuntime,
 } from './container-runtime.js';
 import { logger } from './logger.js';
 
@@ -46,6 +47,57 @@ describe('stopContainer', () => {
   });
 });
 
+// --- resolveRuntime (pure) ---
+
+describe('resolveRuntime', () => {
+  const allAvailable = () => true;
+  const noneAvailable = () => false;
+
+  it('defaults to auto and picks the first available container runtime', () => {
+    expect(resolveRuntime(undefined, allAvailable)).toEqual({
+      kind: 'container',
+      bin: 'docker',
+    });
+  });
+
+  it('prefers podman over container when docker is unavailable', () => {
+    const available = (bin: string) => bin === 'podman' || bin === 'container';
+    expect(resolveRuntime('auto', available)).toEqual({
+      kind: 'container',
+      bin: 'podman',
+    });
+  });
+
+  it('honors an explicit container runtime by name', () => {
+    expect(resolveRuntime('podman', noneAvailable)).toEqual({
+      kind: 'container',
+      bin: 'podman',
+    });
+    expect(resolveRuntime('container', noneAvailable)).toEqual({
+      kind: 'container',
+      bin: 'container',
+    });
+  });
+
+  it('selects host mode when requested', () => {
+    expect(resolveRuntime('host', allAvailable)).toEqual({
+      kind: 'host',
+      bin: null,
+    });
+  });
+
+  it('never falls back to host under auto when no runtime is found', () => {
+    const result = resolveRuntime('auto', noneAvailable);
+    expect(result.kind).toBe('container');
+    expect(result.bin).toBeNull();
+  });
+
+  it('is case-insensitive and trims whitespace', () => {
+    expect(resolveRuntime('  HOST ', allAvailable).kind).toBe('host');
+    expect(resolveRuntime('Docker', noneAvailable).bin).toBe('docker');
+  });
+});
+
 // --- ensureContainerRuntimeRunning ---
 
 describe('ensureContainerRuntimeRunning', () => {
@@ -55,11 +107,14 @@ describe('ensureContainerRuntimeRunning', () => {
     ensureContainerRuntimeRunning();
 
     expect(mockExecSync).toHaveBeenCalledTimes(1);
-    expect(mockExecSync).toHaveBeenCalledWith(
-      `${CONTAINER_RUNTIME_BIN} info`,
-      { stdio: 'pipe', timeout: 10000 },
+    expect(mockExecSync).toHaveBeenCalledWith(`${CONTAINER_RUNTIME_BIN} info`, {
+      stdio: 'pipe',
+      timeout: 10000,
+    });
+    expect(logger.debug).toHaveBeenCalledWith(
+      { runtime: CONTAINER_RUNTIME_BIN },
+      'Container runtime already running',
     );
-    expect(logger.debug).toHaveBeenCalledWith('Container runtime already running');
   });
 
   it('throws when docker info fails', () => {
@@ -79,7 +134,9 @@ describe('ensureContainerRuntimeRunning', () => {
 describe('cleanupOrphans', () => {
   it('stops orphaned nanoclaw containers', () => {
     // docker ps returns container names, one per line
-    mockExecSync.mockReturnValueOnce('nanoclaw-group1-111\nnanoclaw-group2-222\n');
+    mockExecSync.mockReturnValueOnce(
+      'nanoclaw-group1-111\nnanoclaw-group2-222\n',
+    );
     // stop calls succeed
     mockExecSync.mockReturnValue('');
 

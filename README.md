@@ -124,7 +124,21 @@ Skills we'd like to see:
 - macOS, Linux, or Windows 11
 - Node.js 20+
 - [Claude Code](https://claude.ai/download)
-- [Apple Container](https://github.com/apple/container) (macOS) or [Docker](https://docker.com/products/docker-desktop) (macOS/Linux/Windows 11)
+- A container runtime (optional): [Docker](https://docker.com/products/docker-desktop), [Podman](https://podman.io/), or [Apple Container](https://github.com/apple/container) (macOS)
+
+Docker is **optional**. The container runtime is chosen with the
+`CONTAINER_RUNTIME` environment variable:
+
+| `CONTAINER_RUNTIME` | Behavior |
+|---------------------|----------|
+| `auto` (default)    | Use the first available of docker, podman, container |
+| `docker` / `podman` / `container` | Use that runtime explicitly |
+| `host`              | Run the agent directly on the host — **no container, no filesystem isolation** |
+
+`host` mode requires the agent-runner to be built once
+(`cd container/agent-runner && npm install && npm run build`) and trades the
+container sandbox away: the additional-mount allowlist no longer applies and
+the agent can access the host filesystem. Use it only where you accept that.
 
 On Windows 11, the orchestrator runs as a native Node.js process while agents
 run in Linux containers via Docker Desktop's WSL2 backend — enable file sharing
@@ -158,7 +172,11 @@ Because I use WhatsApp. Fork it and run a skill to change it. That's the whole p
 
 **Why Docker?**
 
-Docker provides cross-platform support (macOS and Linux) and a mature ecosystem. On macOS, you can optionally switch to Apple Container via `/convert-to-apple-container` for a lighter-weight native runtime.
+Docker is the default because it's cross-platform and mature, but it's optional. Set `CONTAINER_RUNTIME=podman` (or `container` for Apple Container) to use a different runtime, or `CONTAINER_RUNTIME=host` to run with no container at all. On macOS you can also switch to Apple Container via `/convert-to-apple-container`.
+
+**Can I run without a container runtime?**
+
+Yes — set `CONTAINER_RUNTIME=host`. The agent then runs as a normal host process with the workspace directories passed via env vars. This removes the sandbox: agents get host filesystem access and the additional-mount allowlist no longer applies, so only enable it in environments where that's acceptable. Build the agent-runner first with `cd container/agent-runner && npm install && npm run build`.
 
 **Can I run this on Linux?**
 
@@ -175,7 +193,7 @@ inside a WSL2 Linux distro if you prefer (it detects as Linux in that case).
 
 **Is this secure?**
 
-Agents run in containers, not behind application-level permission checks. They can only access explicitly mounted directories. You should still review what you're running, but the codebase is small enough that you actually can. See [docs/SECURITY.md](docs/SECURITY.md) for the full security model.
+Agents run in containers, not behind application-level permission checks. They can only access explicitly mounted directories. You should still review what you're running, but the codebase is small enough that you actually can. See [docs/SECURITY.md](docs/SECURITY.md) for the full security model. (The isolation guarantees apply to the container runtimes; `CONTAINER_RUNTIME=host` opts out of the sandbox entirely.)
 
 **Why no configuration files?**
 
