@@ -20,8 +20,8 @@ import { resolveGroupFolderPath, resolveGroupIpcPath } from './group-folder.js';
 import { logger } from './logger.js';
 import {
   CONTAINER_RUNTIME_BIN,
+  bindMountArgs,
   isHostMode,
-  readonlyMountArgs,
   stopContainer,
 } from './container-runtime.js';
 import { validateAdditionalMounts } from './mount-security.js';
@@ -208,6 +208,26 @@ function readSecrets(): Record<string, string> {
   return readEnvFile(['CLAUDE_CODE_OAUTH_TOKEN', 'ANTHROPIC_API_KEY']);
 }
 
+/** Upper bound (24h) on a group's configurable agent timeout. */
+const MAX_AGENT_TIMEOUT_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Resolve a group's agent timeout, clamping the (registration-supplied)
+ * containerConfig.timeout to a sane, finite, positive value so a malformed or
+ * hostile value cannot pin a container/concurrency slot indefinitely.
+ */
+function resolveAgentTimeout(group: RegisteredGroup): number {
+  const configured = group.containerConfig?.timeout;
+  if (
+    typeof configured !== 'number' ||
+    !Number.isFinite(configured) ||
+    configured <= 0
+  ) {
+    return CONTAINER_TIMEOUT;
+  }
+  return Math.min(configured, MAX_AGENT_TIMEOUT_MS);
+}
+
 function buildContainerArgs(
   mounts: VolumeMount[],
   containerName: string,
@@ -228,11 +248,9 @@ function buildContainerArgs(
   }
 
   for (const mount of mounts) {
-    if (mount.readonly) {
-      args.push(...readonlyMountArgs(mount.hostPath, mount.containerPath));
-    } else {
-      args.push('-v', `${mount.hostPath}:${mount.containerPath}`);
-    }
+    args.push(
+      ...bindMountArgs(mount.hostPath, mount.containerPath, mount.readonly),
+    );
   }
 
   args.push(CONTAINER_IMAGE);
@@ -296,6 +314,11 @@ function runHostAgent(
   const logsDir = path.join(groupDir, 'logs');
   fs.mkdirSync(logsDir, { recursive: true });
 
+  // Per-group Claude config isolation: point the home dir at the parent of the
+  // group's .claude so `~/.claude` resolves to groupSessionsDir. On Windows the
+  // home dir comes from USERPROFILE (HOME is ignored), and CLAUDE_CONFIG_DIR is
+  // set as a belt-and-suspenders override that works regardless of platform.
+  const groupHome = path.dirname(groupSessionsDir);
   const env: NodeJS.ProcessEnv = {
     ...process.env,
     TZ: TIMEZONE,
@@ -303,8 +326,9 @@ function runHostAgent(
     NANOCLAW_GLOBAL_DIR: globalDir,
     NANOCLAW_EXTRA_DIR: extraDir,
     NANOCLAW_IPC_DIR: groupIpcDir,
-    // Per-group Claude config isolation: ~/.claude resolves to groupSessionsDir.
-    HOME: path.dirname(groupSessionsDir),
+    HOME: groupHome,
+    USERPROFILE: groupHome,
+    CLAUDE_CONFIG_DIR: groupSessionsDir,
   };
 
   const label = `host-${group.folder}`;
@@ -336,7 +360,7 @@ function runHostAgent(
     let hadStreamingOutput = false;
     let timedOut = false;
 
-    const configTimeout = group.containerConfig?.timeout || CONTAINER_TIMEOUT;
+    const configTimeout = resolveAgentTimeout(group);
     const timeoutMs = Math.max(configTimeout, IDLE_TIMEOUT + 30_000);
 
     const killOnTimeout = () => {
@@ -623,7 +647,7 @@ export async function runContainerAgent(
 
     let timedOut = false;
     let hadStreamingOutput = false;
-    const configTimeout = group.containerConfig?.timeout || CONTAINER_TIMEOUT;
+    const configTimeout = resolveAgentTimeout(group);
     // Grace period: hard timeout must be at least IDLE_TIMEOUT + 30s so the
     // graceful _close sentinel has time to trigger before the hard kill fires.
     const timeoutMs = Math.max(configTimeout, IDLE_TIMEOUT + 30_000);

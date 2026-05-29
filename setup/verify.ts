@@ -13,18 +13,11 @@ import Database from 'better-sqlite3';
 
 import { STORE_DIR } from '../src/config.js';
 import { logger } from '../src/logger.js';
-import {
-  commandExists,
-  getPlatform,
-  getServiceManager,
-  hasSystemd,
-  isRoot,
-} from './platform.js';
+import { commandExists, getServiceManager, isRoot } from './platform.js';
 import { emitStatus } from './status.js';
 
 export async function run(_args: string[]): Promise<void> {
   const projectRoot = process.cwd();
-  const platform = getPlatform();
   const homeDir = os.homedir();
 
   logger.info('Starting verification');
@@ -88,17 +81,24 @@ export async function run(_args: string[]): Promise<void> {
   }
   logger.info({ service }, 'Service status');
 
-  // 2. Check container runtime (commandExists is cross-platform; `command -v`
-  // is a POSIX builtin that does not exist on native Windows)
+  // 2. Check container runtime. Honor an explicit CONTAINER_RUNTIME=host
+  // (sandbox-free); otherwise probe apple-container, then docker, then podman.
+  // commandExists is cross-platform (`command -v` does not exist on Windows).
   let containerRuntime = 'none';
-  if (commandExists('container')) {
+  if ((process.env.CONTAINER_RUNTIME || '').toLowerCase() === 'host') {
+    containerRuntime = 'host';
+  } else if (commandExists('container')) {
     containerRuntime = 'apple-container';
   } else {
-    try {
-      execSync('docker info', { stdio: 'ignore' });
-      containerRuntime = 'docker';
-    } catch {
-      // No runtime
+    for (const bin of ['docker', 'podman']) {
+      if (!commandExists(bin)) continue;
+      try {
+        execSync(`${bin} info`, { stdio: 'ignore' });
+        containerRuntime = bin;
+        break;
+      } catch {
+        // Installed but not running — keep probing other runtimes.
+      }
     }
   }
 

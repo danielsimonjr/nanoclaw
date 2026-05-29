@@ -89,12 +89,32 @@ export function isHostMode(): boolean {
   return RUNTIME_KIND === 'host';
 }
 
+/**
+ * Normalize a host path for the runtime's `-v` flag. On Windows the source must
+ * use forward slashes (e.g. `C:/Users/me`) so the runtime's volume parser
+ * recognizes the drive letter and does not choke on backslashes; the single
+ * leading drive-letter colon is the only colon the parser tolerates.
+ */
+export function normalizeMountSource(hostPath: string): string {
+  return process.platform === 'win32' ? hostPath.replace(/\\/g, '/') : hostPath;
+}
+
+/** Returns CLI args for a bind mount (read-only when `readonly`). */
+export function bindMountArgs(
+  hostPath: string,
+  containerPath: string,
+  readonly: boolean,
+): string[] {
+  const src = normalizeMountSource(hostPath);
+  return ['-v', `${src}:${containerPath}${readonly ? ':ro' : ''}`];
+}
+
 /** Returns CLI args for a readonly bind mount. */
 export function readonlyMountArgs(
   hostPath: string,
   containerPath: string,
 ): string[] {
-  return ['-v', `${hostPath}:${containerPath}:ro`];
+  return bindMountArgs(hostPath, containerPath, true);
 }
 
 /** Returns the shell command to stop a container by name. */

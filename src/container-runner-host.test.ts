@@ -23,6 +23,7 @@ vi.mock('./logger.js', () => ({
 vi.mock('./container-runtime.js', () => ({
   isHostMode: () => true,
   CONTAINER_RUNTIME_BIN: 'docker',
+  bindMountArgs: () => [],
   readonlyMountArgs: () => [],
   stopContainer: (n: string) => `docker stop ${n}`,
 }));

@@ -14,9 +14,7 @@ import {
   getPlatform,
   getNodePath,
   getServiceManager,
-  hasSystemd,
   isRoot,
-  isWSL,
 } from './platform.js';
 import { emitStatus } from './status.js';
 
@@ -356,7 +354,7 @@ function setupNohupFallback(
     PROJECT_PATH: projectRoot,
     WRAPPER_PATH: wrapperPath,
     SERVICE_LOADED: false,
-    FALLBACK: 'wsl_no_systemd',
+    FALLBACK: 'no_systemd',
     STATUS: 'success',
     LOG: 'logs/setup.log',
   });
