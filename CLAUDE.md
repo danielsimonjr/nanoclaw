@@ -40,6 +40,8 @@ npm run build        # Compile TypeScript
 ./container/build.sh # Rebuild agent container
 ```
 
+Container runtime is selected via `CONTAINER_RUNTIME` (`auto` default, or `docker`/`podman`/`container`/`host`). `host` runs the agent without a sandbox and requires `container/agent-runner` to be built (`npm install && npm run build` there). Runtime abstraction lives in `src/container-runtime.ts`.
+
 Service management:
 ```bash
 # macOS (launchd)
@@ -51,6 +53,12 @@ launchctl kickstart -k gui/$(id -u)/com.nanoclaw  # restart
 systemctl --user start nanoclaw
 systemctl --user stop nanoclaw
 systemctl --user restart nanoclaw
+
+# Windows 11 (Scheduled Task, runs at logon)
+schtasks /Run /TN NanoClaw      # start now
+schtasks /End /TN NanoClaw      # stop
+schtasks /Query /TN NanoClaw    # status
+# Orchestrator runs natively; agents run in Linux containers via Docker Desktop (WSL2 backend).
 ```
 
 ## Container Build Cache

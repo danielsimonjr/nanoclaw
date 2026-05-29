@@ -32,6 +32,7 @@ import {
   validateMount,
   validateAdditionalMounts,
   generateAllowlistTemplate,
+  hostPathHasDisallowedColon,
   _resetMountAllowlistCache,
 } from './mount-security.js';
 import { MountAllowlist } from './types.js';
@@ -366,5 +367,28 @@ describe('generateAllowlistTemplate', () => {
     expect(typeof parsed.nonMainReadOnly).toBe('boolean');
     expect(parsed.allowedRoots[0]).toHaveProperty('path');
     expect(parsed.allowedRoots[0]).toHaveProperty('allowReadWrite');
+  });
+});
+
+describe('hostPathHasDisallowedColon', () => {
+  it('rejects any colon on POSIX platforms', () => {
+    expect(hostPathHasDisallowedColon('/home/me/a:b', 'linux')).toBe(true);
+    expect(hostPathHasDisallowedColon('/home/me/data', 'linux')).toBe(false);
+  });
+
+  it('permits a single leading drive-letter colon on Windows', () => {
+    expect(hostPathHasDisallowedColon('C:\\Users\\me\\data', 'win32')).toBe(
+      false,
+    );
+    expect(hostPathHasDisallowedColon('d:\\projects', 'win32')).toBe(false);
+  });
+
+  it('still rejects extra colons on Windows (e.g. NTFS data streams)', () => {
+    // A drive colon plus a stream colon must be blocked.
+    expect(
+      hostPathHasDisallowedColon('C:\\Users\\me\\file:stream', 'win32'),
+    ).toBe(true);
+    // A colon that is not a drive letter (two chars before it) is blocked.
+    expect(hostPathHasDisallowedColon('ab:\\evil', 'win32')).toBe(true);
   });
 });

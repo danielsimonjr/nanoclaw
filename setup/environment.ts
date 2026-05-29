@@ -39,13 +39,23 @@ export async function run(_args: string[]): Promise<void> {
     }
   }
 
+  // Check Podman (drop-in Docker-compatible runtime; Docker is optional)
+  let podman: 'running' | 'installed_not_running' | 'not_found' = 'not_found';
+  if (commandExists('podman')) {
+    try {
+      const { execSync } = await import('child_process');
+      execSync('podman info', { stdio: 'ignore' });
+      podman = 'running';
+    } catch {
+      podman = 'installed_not_running';
+    }
+  }
+
   // Check existing config
   const hasEnv = fs.existsSync(path.join(projectRoot, '.env'));
 
   const authDir = path.join(projectRoot, 'store', 'auth');
-  const hasAuth =
-    fs.existsSync(authDir) &&
-    fs.readdirSync(authDir).length > 0;
+  const hasAuth = fs.existsSync(authDir) && fs.readdirSync(authDir).length > 0;
 
   let hasRegisteredGroups = false;
   // Check JSON file first (pre-migration)
@@ -57,9 +67,9 @@ export async function run(_args: string[]): Promise<void> {
     if (fs.existsSync(dbPath)) {
       try {
         const db = new Database(dbPath, { readonly: true });
-        const row = db.prepare(
-          'SELECT COUNT(*) as count FROM registered_groups',
-        ).get() as { count: number };
+        const row = db
+          .prepare('SELECT COUNT(*) as count FROM registered_groups')
+          .get() as { count: number };
         if (row.count > 0) hasRegisteredGroups = true;
         db.close();
       } catch {
@@ -68,8 +78,23 @@ export async function run(_args: string[]): Promise<void> {
     }
   }
 
-  logger.info({ platform, wsl, appleContainer, docker, hasEnv, hasAuth, hasRegisteredGroups },
-    'Environment check complete');
+  // Explicit runtime override (auto | docker | podman | container | host)
+  const containerRuntime = process.env.CONTAINER_RUNTIME || 'auto';
+
+  logger.info(
+    {
+      platform,
+      wsl,
+      appleContainer,
+      docker,
+      podman,
+      containerRuntime,
+      hasEnv,
+      hasAuth,
+      hasRegisteredGroups,
+    },
+    'Environment check complete',
+  );
 
   emitStatus('CHECK_ENVIRONMENT', {
     PLATFORM: platform,
@@ -77,6 +102,8 @@ export async function run(_args: string[]): Promise<void> {
     IS_HEADLESS: headless,
     APPLE_CONTAINER: appleContainer,
     DOCKER: docker,
+    PODMAN: podman,
+    CONTAINER_RUNTIME: containerRuntime,
     HAS_ENV: hasEnv,
     HAS_AUTH: hasAuth,
     HAS_REGISTERED_GROUPS: hasRegisteredGroups,

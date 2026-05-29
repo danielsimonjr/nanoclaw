@@ -39,44 +39,77 @@ export async function run(args: string[]): Promise<void> {
     process.exit(4);
   }
 
-  // Validate runtime availability
-  if (runtime === 'apple-container' && !commandExists('container')) {
+  // Host mode runs the agent directly on the host — no image to build.
+  if (runtime === 'host') {
+    logger.info('CONTAINER_RUNTIME=host — skipping image build (no sandbox)');
     emitStatus('SETUP_CONTAINER', {
-      RUNTIME: runtime, IMAGE: image, BUILD_OK: false, TEST_OK: false,
-      STATUS: 'failed', ERROR: 'runtime_not_available', LOG: 'logs/setup.log',
+      RUNTIME: 'host',
+      IMAGE: 'none',
+      BUILD_OK: true,
+      TEST_OK: true,
+      STATUS: 'success',
+      LOG: 'logs/setup.log',
     });
-    process.exit(2);
+    return;
   }
 
-  if (runtime === 'docker') {
-    if (!commandExists('docker')) {
-      emitStatus('SETUP_CONTAINER', {
-        RUNTIME: runtime, IMAGE: image, BUILD_OK: false, TEST_OK: false,
-        STATUS: 'failed', ERROR: 'runtime_not_available', LOG: 'logs/setup.log',
-      });
-      process.exit(2);
-    }
-    try {
-      execSync('docker info', { stdio: 'ignore' });
-    } catch {
-      emitStatus('SETUP_CONTAINER', {
-        RUNTIME: runtime, IMAGE: image, BUILD_OK: false, TEST_OK: false,
-        STATUS: 'failed', ERROR: 'runtime_not_available', LOG: 'logs/setup.log',
-      });
-      process.exit(2);
-    }
-  }
+  // Map each supported container runtime to its CLI binary.
+  const runtimeBin: Record<string, string> = {
+    docker: 'docker',
+    podman: 'podman',
+    'apple-container': 'container',
+  };
 
-  if (!['apple-container', 'docker'].includes(runtime)) {
+  if (!(runtime in runtimeBin)) {
     emitStatus('SETUP_CONTAINER', {
-      RUNTIME: runtime, IMAGE: image, BUILD_OK: false, TEST_OK: false,
-      STATUS: 'failed', ERROR: 'unknown_runtime', LOG: 'logs/setup.log',
+      RUNTIME: runtime,
+      IMAGE: image,
+      BUILD_OK: false,
+      TEST_OK: false,
+      STATUS: 'failed',
+      ERROR: 'unknown_runtime',
+      LOG: 'logs/setup.log',
     });
     process.exit(4);
   }
 
-  const buildCmd = runtime === 'apple-container' ? 'container build' : 'docker build';
-  const runCmd = runtime === 'apple-container' ? 'container' : 'docker';
+  const bin = runtimeBin[runtime];
+
+  // Validate runtime availability
+  if (!commandExists(bin)) {
+    emitStatus('SETUP_CONTAINER', {
+      RUNTIME: runtime,
+      IMAGE: image,
+      BUILD_OK: false,
+      TEST_OK: false,
+      STATUS: 'failed',
+      ERROR: 'runtime_not_available',
+      LOG: 'logs/setup.log',
+    });
+    process.exit(2);
+  }
+
+  // docker/podman expose a daemon reachable via `<bin> info`; Apple container
+  // does not need this check.
+  if (runtime === 'docker' || runtime === 'podman') {
+    try {
+      execSync(`${bin} info`, { stdio: 'ignore' });
+    } catch {
+      emitStatus('SETUP_CONTAINER', {
+        RUNTIME: runtime,
+        IMAGE: image,
+        BUILD_OK: false,
+        TEST_OK: false,
+        STATUS: 'failed',
+        ERROR: 'runtime_not_available',
+        LOG: 'logs/setup.log',
+      });
+      process.exit(2);
+    }
+  }
+
+  const buildCmd = `${bin} build`;
+  const runCmd = bin;
 
   // Build
   let buildOk = false;

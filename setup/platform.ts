@@ -5,14 +5,19 @@ import { execSync } from 'child_process';
 import fs from 'fs';
 import os from 'os';
 
-export type Platform = 'macos' | 'linux' | 'unknown';
-export type ServiceManager = 'launchd' | 'systemd' | 'none';
+export type Platform = 'macos' | 'linux' | 'windows' | 'unknown';
+export type ServiceManager = 'launchd' | 'systemd' | 'schtasks' | 'none';
 
 export function getPlatform(): Platform {
   const platform = os.platform();
   if (platform === 'darwin') return 'macos';
   if (platform === 'linux') return 'linux';
+  if (platform === 'win32') return 'windows';
   return 'unknown';
+}
+
+export function isWindows(): boolean {
+  return os.platform() === 'win32';
 }
 
 export function isWSL(): boolean {
@@ -60,6 +65,12 @@ export function openBrowser(url: string): boolean {
       execSync(`open ${JSON.stringify(url)}`, { stdio: 'ignore' });
       return true;
     }
+    if (platform === 'windows') {
+      // `start` is a cmd.exe builtin; the first quoted argument is the window
+      // title, so an empty "" must precede the URL.
+      execSync(`start "" ${JSON.stringify(url)}`, { stdio: 'ignore' });
+      return true;
+    }
     if (platform === 'linux') {
       // Try xdg-open first, then wslview for WSL
       if (commandExists('xdg-open')) {
@@ -73,7 +84,9 @@ export function openBrowser(url: string): boolean {
       // WSL without wslview: try cmd.exe
       if (isWSL()) {
         try {
-          execSync(`cmd.exe /c start "" ${JSON.stringify(url)}`, { stdio: 'ignore' });
+          execSync(`cmd.exe /c start "" ${JSON.stringify(url)}`, {
+            stdio: 'ignore',
+          });
           return true;
         } catch {
           // cmd.exe not available
@@ -89,6 +102,7 @@ export function openBrowser(url: string): boolean {
 export function getServiceManager(): ServiceManager {
   const platform = getPlatform();
   if (platform === 'macos') return 'launchd';
+  if (platform === 'windows') return 'schtasks';
   if (platform === 'linux') {
     if (hasSystemd()) return 'systemd';
     return 'none';
@@ -98,6 +112,12 @@ export function getServiceManager(): ServiceManager {
 
 export function getNodePath(): string {
   try {
+    if (isWindows()) {
+      // `where` can list multiple matches; take the first line.
+      const out = execSync('where node', { encoding: 'utf-8' }).trim();
+      const first = out.split(/\r?\n/)[0]?.trim();
+      return first || process.execPath;
+    }
     return execSync('command -v node', { encoding: 'utf-8' }).trim();
   } catch {
     return process.execPath;
@@ -106,7 +126,9 @@ export function getNodePath(): string {
 
 export function commandExists(name: string): boolean {
   try {
-    execSync(`command -v ${name}`, { stdio: 'ignore' });
+    // `command -v` is a POSIX shell builtin; Windows uses `where`.
+    const probe = isWindows() ? `where ${name}` : `command -v ${name}`;
+    execSync(probe, { stdio: 'ignore' });
     return true;
   } catch {
     return false;
