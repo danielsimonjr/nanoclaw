@@ -138,8 +138,9 @@ Docker is **optional**. The container runtime is chosen with the
 
 `host` mode requires the agent-runner to be built once
 (`cd container/agent-runner && npm install && npm run build`) and trades the
-container sandbox away: the additional-mount allowlist no longer applies and
-the agent can access the host filesystem. Use it only where you accept that.
+container sandbox away: the additional-mount allowlist no longer applies, the
+agent can access the host filesystem, and it inherits the orchestrator's
+environment variables. Use it only where you accept that.
 
 On Windows 11, the orchestrator runs as a native Node.js process while agents
 run in Linux containers via Docker Desktop's WSL2 backend — enable file sharing

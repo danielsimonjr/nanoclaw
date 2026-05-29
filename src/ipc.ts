@@ -370,6 +370,29 @@ export async function processTaskIpc(
           );
           break;
         }
+        // Prevent folder hijack: the `registered_groups.folder` column is UNIQUE
+        // and persisted via INSERT OR REPLACE, so re-registering an existing
+        // folder under a new JID would silently steal that group's folder,
+        // sessions, memory, and IPC namespace. Reject if the folder is already
+        // owned by a different JID (or the JID already maps to another folder).
+        const conflict = Object.entries(registeredGroups).find(
+          ([jid, g]) =>
+            (g.folder === data.folder && jid !== data.jid) ||
+            (jid === data.jid && g.folder !== data.folder),
+        );
+        if (conflict) {
+          logger.warn(
+            {
+              sourceGroup,
+              folder: data.folder,
+              jid: data.jid,
+              conflictingJid: conflict[0],
+              conflictingFolder: conflict[1].folder,
+            },
+            'Rejected register_group - folder/JID already bound to a different group',
+          );
+          break;
+        }
         deps.registerGroup(data.jid, {
           name: data.name,
           folder: data.folder,

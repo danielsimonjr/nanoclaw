@@ -19,12 +19,27 @@ vi.mock('child_process', () => ({
 import {
   CONTAINER_RUNTIME_BIN,
   readonlyMountArgs,
+  bindMountArgs,
+  normalizeMountSource,
   stopContainer,
   ensureContainerRuntimeRunning,
   cleanupOrphans,
   resolveRuntime,
 } from './container-runtime.js';
 import { logger } from './logger.js';
+
+function withPlatform(platform: NodeJS.Platform, fn: () => void): void {
+  const original = Object.getOwnPropertyDescriptor(process, 'platform')!;
+  Object.defineProperty(process, 'platform', {
+    value: platform,
+    configurable: true,
+  });
+  try {
+    fn();
+  } finally {
+    Object.defineProperty(process, 'platform', original);
+  }
+}
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -44,6 +59,29 @@ describe('stopContainer', () => {
     expect(stopContainer('nanoclaw-test-123')).toBe(
       `${CONTAINER_RUNTIME_BIN} stop nanoclaw-test-123`,
     );
+  });
+});
+
+describe('mount source normalization (cross-platform)', () => {
+  it('leaves POSIX paths unchanged', () => {
+    withPlatform('linux', () => {
+      expect(normalizeMountSource('/home/me/data')).toBe('/home/me/data');
+      expect(bindMountArgs('/home/me/data', '/workspace/group', false)).toEqual(
+        ['-v', '/home/me/data:/workspace/group'],
+      );
+    });
+  });
+
+  it('converts Windows backslashes to forward slashes so the drive letter parses', () => {
+    withPlatform('win32', () => {
+      expect(normalizeMountSource('C:\\Users\\me\\data')).toBe(
+        'C:/Users/me/data',
+      );
+      // Read-only mount keeps the :ro suffix after the forward-slashed source.
+      expect(
+        bindMountArgs('C:\\Users\\me\\proj', '/workspace/project', true),
+      ).toEqual(['-v', 'C:/Users/me/proj:/workspace/project:ro']);
+    });
   });
 });
 
