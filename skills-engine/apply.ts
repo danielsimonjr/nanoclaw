@@ -26,7 +26,12 @@ import {
   setupRerereAdapter,
 } from './merge.js';
 import { loadResolutions } from './resolution-cache.js';
-import { computeFileHash, readState, recordSkillApplication, writeState } from './state.js';
+import {
+  computeFileHash,
+  readState,
+  recordSkillApplication,
+  writeState,
+} from './state.js';
 import {
   mergeDockerComposeServices,
   mergeEnvAdditions,
@@ -123,11 +128,17 @@ export async function applySkill(skillDir: string): Promise<ApplyResult> {
   try {
     // --- Backup ---
     const filesToBackup = [
-      ...manifest.modifies.map((f) => path.join(projectRoot, resolvePathRemap(f, pathRemap))),
-      ...manifest.adds.map((f) => path.join(projectRoot, resolvePathRemap(f, pathRemap))),
+      ...manifest.modifies.map((f) =>
+        path.join(projectRoot, resolvePathRemap(f, pathRemap)),
+      ),
+      ...manifest.adds.map((f) =>
+        path.join(projectRoot, resolvePathRemap(f, pathRemap)),
+      ),
       ...(manifest.file_ops || [])
         .filter((op) => op.from)
-        .map((op) => path.join(projectRoot, resolvePathRemap(op.from!, pathRemap))),
+        .map((op) =>
+          path.join(projectRoot, resolvePathRemap(op.from!, pathRemap)),
+        ),
       path.join(projectRoot, 'package.json'),
       path.join(projectRoot, 'package-lock.json'),
       path.join(projectRoot, '.env.example'),
@@ -173,12 +184,21 @@ export async function applySkill(skillDir: string): Promise<ApplyResult> {
 
     // Load pre-computed resolutions into git's rr-cache before merging
     const appliedSkillNames = currentState.applied_skills.map((s) => s.name);
-    loadResolutions([...appliedSkillNames, manifest.skill], projectRoot, skillDir);
+    loadResolutions(
+      [...appliedSkillNames, manifest.skill],
+      projectRoot,
+      skillDir,
+    );
 
     for (const relPath of manifest.modifies) {
       const resolvedPath = resolvePathRemap(relPath, pathRemap);
       const currentPath = path.join(projectRoot, resolvedPath);
-      const basePath = path.join(projectRoot, NANOCLAW_DIR, 'base', resolvedPath);
+      const basePath = path.join(
+        projectRoot,
+        NANOCLAW_DIR,
+        'base',
+        resolvedPath,
+      );
       // skillPath uses original relPath — skill packages are never mutated
       const skillPath = path.join(skillDir, 'modify', relPath);
 
@@ -224,7 +244,12 @@ export async function applySkill(skillDir: string): Promise<ApplyResult> {
           const baseContent = fs.readFileSync(basePath, 'utf-8');
           const theirsContent = fs.readFileSync(skillPath, 'utf-8');
 
-          setupRerereAdapter(resolvedPath, baseContent, oursContent, theirsContent);
+          setupRerereAdapter(
+            resolvedPath,
+            baseContent,
+            oursContent,
+            theirsContent,
+          );
           const autoResolved = runRerere(currentPath);
 
           if (autoResolved) {
@@ -236,8 +261,12 @@ export async function applySkill(skillDir: string): Promise<ApplyResult> {
             // Unstage the file — cleanupMergeState clears unmerged entries
             // but the git add above leaves the file staged at stage 0
             try {
-              execFileSync('git', ['restore', '--staged', resolvedPath], { stdio: 'pipe' });
-            } catch { /* may fail if file is new or not tracked */ }
+              execFileSync('git', ['restore', '--staged', resolvedPath], {
+                stdio: 'pipe',
+              });
+            } catch {
+              /* may fail if file is new or not tracked */
+            }
             continue;
           }
 
@@ -299,7 +328,9 @@ export async function applySkill(skillDir: string): Promise<ApplyResult> {
           for (const f of addedFiles) {
             try {
               if (fs.existsSync(f)) fs.unlinkSync(f);
-            } catch { /* best effort */ }
+            } catch {
+              /* best effort */
+            }
           }
           restoreBackup();
           clearBackup();
@@ -351,7 +382,9 @@ export async function applySkill(skillDir: string): Promise<ApplyResult> {
         for (const f of addedFiles) {
           try {
             if (fs.existsSync(f)) fs.unlinkSync(f);
-          } catch { /* best effort */ }
+          } catch {
+            /* best effort */
+          }
         }
         restoreBackup();
         // Re-read state and remove the skill we just recorded
@@ -385,7 +418,9 @@ export async function applySkill(skillDir: string): Promise<ApplyResult> {
     for (const f of addedFiles) {
       try {
         if (fs.existsSync(f)) fs.unlinkSync(f);
-      } catch { /* best effort */ }
+      } catch {
+        /* best effort */
+      }
     }
     restoreBackup();
     clearBackup();
@@ -394,4 +429,3 @@ export async function applySkill(skillDir: string): Promise<ApplyResult> {
     releaseLock();
   }
 }
-

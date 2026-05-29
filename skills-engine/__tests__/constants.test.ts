@@ -30,7 +30,13 @@ describe('constants', () => {
   });
 
   it('path constants use forward slashes and .nanoclaw prefix', () => {
-    const pathConstants = [BASE_DIR, BACKUP_DIR, LOCK_FILE, CUSTOM_DIR, RESOLUTIONS_DIR];
+    const pathConstants = [
+      BASE_DIR,
+      BACKUP_DIR,
+      LOCK_FILE,
+      CUSTOM_DIR,
+      RESOLUTIONS_DIR,
+    ];
     for (const p of pathConstants) {
       expect(p).not.toContain('\\');
       expect(p).toMatch(/^\.nanoclaw\//);

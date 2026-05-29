@@ -8,7 +8,12 @@ import {
   loadResolutions,
   saveResolution,
 } from '../resolution-cache.js';
-import { createTempDir, setupNanoclawDir, initGitRepo, cleanup } from './test-helpers.js';
+import {
+  createTempDir,
+  setupNanoclawDir,
+  initGitRepo,
+  cleanup,
+} from './test-helpers.js';
 
 function sha256(content: string): string {
   return crypto.createHash('sha256').update(content).digest('hex');
@@ -39,18 +44,34 @@ describe('resolution-cache', () => {
   it('saveResolution creates directory structure with files and meta', () => {
     saveResolution(
       ['skill-b', 'skill-a'],
-      [{ relPath: 'src/config.ts', preimage: 'conflict content', resolution: 'resolved content', inputHashes: dummyHashes }],
+      [
+        {
+          relPath: 'src/config.ts',
+          preimage: 'conflict content',
+          resolution: 'resolved content',
+          inputHashes: dummyHashes,
+        },
+      ],
       { core_version: '1.0.0' },
       tmpDir,
     );
 
     // Skills are sorted, so key is "skill-a+skill-b"
-    const resDir = path.join(tmpDir, '.nanoclaw', 'resolutions', 'skill-a+skill-b');
+    const resDir = path.join(
+      tmpDir,
+      '.nanoclaw',
+      'resolutions',
+      'skill-a+skill-b',
+    );
     expect(fs.existsSync(resDir)).toBe(true);
 
     // Check preimage and resolution files exist
-    expect(fs.existsSync(path.join(resDir, 'src/config.ts.preimage'))).toBe(true);
-    expect(fs.existsSync(path.join(resDir, 'src/config.ts.resolution'))).toBe(true);
+    expect(fs.existsSync(path.join(resDir, 'src/config.ts.preimage'))).toBe(
+      true,
+    );
+    expect(fs.existsSync(path.join(resDir, 'src/config.ts.resolution'))).toBe(
+      true,
+    );
 
     // Check meta.yaml exists and has expected fields
     const metaPath = path.join(resDir, 'meta.yaml');
@@ -69,13 +90,22 @@ describe('resolution-cache', () => {
 
     saveResolution(
       ['alpha', 'beta'],
-      [{ relPath: 'src/config.ts', preimage: 'pre', resolution: 'post', inputHashes: hashes }],
+      [
+        {
+          relPath: 'src/config.ts',
+          preimage: 'pre',
+          resolution: 'post',
+          inputHashes: hashes,
+        },
+      ],
       {},
       tmpDir,
     );
 
     const resDir = path.join(tmpDir, '.nanoclaw', 'resolutions', 'alpha+beta');
-    const meta = parse(fs.readFileSync(path.join(resDir, 'meta.yaml'), 'utf-8'));
+    const meta = parse(
+      fs.readFileSync(path.join(resDir, 'meta.yaml'), 'utf-8'),
+    );
     expect(meta.file_hashes).toBeDefined();
     expect(meta.file_hashes['src/config.ts']).toEqual(hashes);
   });
@@ -83,7 +113,14 @@ describe('resolution-cache', () => {
   it('findResolutionDir returns path after save', () => {
     saveResolution(
       ['alpha', 'beta'],
-      [{ relPath: 'file.ts', preimage: 'pre', resolution: 'post', inputHashes: dummyHashes }],
+      [
+        {
+          relPath: 'file.ts',
+          preimage: 'pre',
+          resolution: 'post',
+          inputHashes: dummyHashes,
+        },
+      ],
       {},
       tmpDir,
     );
@@ -94,9 +131,17 @@ describe('resolution-cache', () => {
   });
 
   it('findResolutionDir finds shipped resolutions in .claude/resolutions', () => {
-    const shippedDir = path.join(tmpDir, '.claude', 'resolutions', 'alpha+beta');
+    const shippedDir = path.join(
+      tmpDir,
+      '.claude',
+      'resolutions',
+      'alpha+beta',
+    );
     fs.mkdirSync(shippedDir, { recursive: true });
-    fs.writeFileSync(path.join(shippedDir, 'meta.yaml'), 'skills: [alpha, beta]\n');
+    fs.writeFileSync(
+      path.join(shippedDir, 'meta.yaml'),
+      'skills: [alpha, beta]\n',
+    );
 
     const result = findResolutionDir(['alpha', 'beta'], tmpDir);
     expect(result).not.toBeNull();
@@ -111,7 +156,14 @@ describe('resolution-cache', () => {
 
     saveResolution(
       ['a', 'b'],
-      [{ relPath: 'f.ts', preimage: 'x', resolution: 'project', inputHashes: dummyHashes }],
+      [
+        {
+          relPath: 'f.ts',
+          preimage: 'x',
+          resolution: 'project',
+          inputHashes: dummyHashes,
+        },
+      ],
       {},
       tmpDir,
     );
@@ -123,7 +175,14 @@ describe('resolution-cache', () => {
   it('skills are sorted so order does not matter', () => {
     saveResolution(
       ['zeta', 'alpha'],
-      [{ relPath: 'f.ts', preimage: 'a', resolution: 'b', inputHashes: dummyHashes }],
+      [
+        {
+          relPath: 'f.ts',
+          preimage: 'a',
+          resolution: 'b',
+          inputHashes: dummyHashes,
+        },
+      ],
       {},
       tmpDir,
     );
@@ -152,9 +211,18 @@ describe('resolution-cache', () => {
       fs.mkdirSync(path.join(resDir, 'src'), { recursive: true });
 
       // Write preimage, resolution, and hash sidecar
-      fs.writeFileSync(path.join(resDir, 'src/config.ts.preimage'), preimageContent);
-      fs.writeFileSync(path.join(resDir, 'src/config.ts.resolution'), resolutionContent);
-      fs.writeFileSync(path.join(resDir, 'src/config.ts.preimage.hash'), rerereHash);
+      fs.writeFileSync(
+        path.join(resDir, 'src/config.ts.preimage'),
+        preimageContent,
+      );
+      fs.writeFileSync(
+        path.join(resDir, 'src/config.ts.resolution'),
+        resolutionContent,
+      );
+      fs.writeFileSync(
+        path.join(resDir, 'src/config.ts.preimage.hash'),
+        rerereHash,
+      );
 
       // Write meta.yaml
       const meta: any = {
@@ -176,8 +244,13 @@ describe('resolution-cache', () => {
 
     function setupInputFiles() {
       // Create base file
-      fs.mkdirSync(path.join(tmpDir, '.nanoclaw', 'base', 'src'), { recursive: true });
-      fs.writeFileSync(path.join(tmpDir, '.nanoclaw', 'base', 'src', 'config.ts'), baseContent);
+      fs.mkdirSync(path.join(tmpDir, '.nanoclaw', 'base', 'src'), {
+        recursive: true,
+      });
+      fs.writeFileSync(
+        path.join(tmpDir, '.nanoclaw', 'base', 'src', 'config.ts'),
+        baseContent,
+      );
 
       // Create current file
       fs.mkdirSync(path.join(tmpDir, 'src'), { recursive: true });
@@ -187,7 +260,10 @@ describe('resolution-cache', () => {
     function createSkillDir() {
       const skillDir = path.join(tmpDir, 'skill-pkg');
       fs.mkdirSync(path.join(skillDir, 'modify', 'src'), { recursive: true });
-      fs.writeFileSync(path.join(skillDir, 'modify', 'src', 'config.ts'), skillContent);
+      fs.writeFileSync(
+        path.join(skillDir, 'modify', 'src', 'config.ts'),
+        skillContent,
+      );
       return skillDir;
     }
 
@@ -234,7 +310,9 @@ describe('resolution-cache', () => {
 
       // rr-cache entry should NOT be created
       const gitDir = path.join(tmpDir, '.git');
-      expect(fs.existsSync(path.join(gitDir, 'rr-cache', rerereHash))).toBe(false);
+      expect(fs.existsSync(path.join(gitDir, 'rr-cache', rerereHash))).toBe(
+        false,
+      );
     });
 
     it('skips pair with mismatched current hash', () => {

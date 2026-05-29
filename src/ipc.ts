@@ -252,10 +252,10 @@ export async function processTaskIpc(
         }
 
         const taskId = `task-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        // Default to 'group' to match the agent-runner schedule_task tool's
+        // documented default; only an explicit 'isolated' opts out.
         const contextMode =
-          data.context_mode === 'group' || data.context_mode === 'isolated'
-            ? data.context_mode
-            : 'isolated';
+          data.context_mode === 'isolated' ? 'isolated' : 'group';
         createTask({
           id: taskId,
           group_folder: targetFolder,

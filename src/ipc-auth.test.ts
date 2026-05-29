@@ -647,7 +647,7 @@ describe('schedule_task context_mode', () => {
     expect(tasks[0].context_mode).toBe('isolated');
   });
 
-  it('defaults invalid context_mode to isolated', async () => {
+  it('defaults invalid context_mode to group (matches the schedule_task tool default)', async () => {
     await processTaskIpc(
       {
         type: 'schedule_task',
@@ -663,10 +663,10 @@ describe('schedule_task context_mode', () => {
     );
 
     const tasks = getAllTasks();
-    expect(tasks[0].context_mode).toBe('isolated');
+    expect(tasks[0].context_mode).toBe('group');
   });
 
-  it('defaults missing context_mode to isolated', async () => {
+  it('defaults missing context_mode to group', async () => {
     await processTaskIpc(
       {
         type: 'schedule_task',
@@ -681,7 +681,7 @@ describe('schedule_task context_mode', () => {
     );
 
     const tasks = getAllTasks();
-    expect(tasks[0].context_mode).toBe('isolated');
+    expect(tasks[0].context_mode).toBe('group');
   });
 });
 
