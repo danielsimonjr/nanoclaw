@@ -10,7 +10,10 @@ import { logger } from './logger.js';
 export const CONTAINER_RUNTIME_BIN = 'docker';
 
 /** Returns CLI args for a readonly bind mount. */
-export function readonlyMountArgs(hostPath: string, containerPath: string): string[] {
+export function readonlyMountArgs(
+  hostPath: string,
+  containerPath: string,
+): string[] {
   return ['-v', `${hostPath}:${containerPath}:ro`];
 }
 
@@ -22,7 +25,10 @@ export function stopContainer(name: string): string {
 /** Ensure the container runtime is running, starting it if needed. */
 export function ensureContainerRuntimeRunning(): void {
   try {
-    execSync(`${CONTAINER_RUNTIME_BIN} info`, { stdio: 'pipe', timeout: 10000 });
+    execSync(`${CONTAINER_RUNTIME_BIN} info`, {
+      stdio: 'pipe',
+      timeout: 10000,
+    });
     logger.debug('Container runtime already running');
   } catch (err) {
     logger.error({ err }, 'Failed to reach container runtime');
@@ -58,17 +64,24 @@ export function ensureContainerRuntimeRunning(): void {
 export function cleanupOrphans(): void {
   try {
     const output = execSync(
-      `${CONTAINER_RUNTIME_BIN} ps --filter name=nanoclaw- --format '{{.Names}}'`,
+      // Double quotes work in both POSIX shells and cmd.exe; single quotes are
+      // passed literally by cmd.exe on Windows and would break the format.
+      `${CONTAINER_RUNTIME_BIN} ps --filter name=nanoclaw- --format "{{.Names}}"`,
       { stdio: ['pipe', 'pipe', 'pipe'], encoding: 'utf-8' },
     );
     const orphans = output.trim().split('\n').filter(Boolean);
     for (const name of orphans) {
       try {
         execSync(stopContainer(name), { stdio: 'pipe' });
-      } catch { /* already stopped */ }
+      } catch {
+        /* already stopped */
+      }
     }
     if (orphans.length > 0) {
-      logger.info({ count: orphans.length, names: orphans }, 'Stopped orphaned containers');
+      logger.info(
+        { count: orphans.length, names: orphans },
+        'Stopped orphaned containers',
+      );
     }
   } catch (err) {
     logger.warn({ err }, 'Failed to clean up orphaned containers');

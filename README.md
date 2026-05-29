@@ -114,17 +114,22 @@ Skills we'd like to see:
 - `/add-slack` - Add Slack
 
 **Platform Support**
-- `/setup-windows` - Windows via WSL2 + Docker
+- Windows 11 runs natively (Docker Desktop + WSL2 backend) or inside a WSL2 distro — both supported by `/setup`
 
 **Session Management**
 - `/add-clear` - Add a `/clear` command that compacts the conversation (summarizes context while preserving critical information in the same session). Requires figuring out how to trigger compaction programmatically via the Claude Agent SDK.
 
 ## Requirements
 
-- macOS or Linux
+- macOS, Linux, or Windows 11
 - Node.js 20+
 - [Claude Code](https://claude.ai/download)
-- [Apple Container](https://github.com/apple/container) (macOS) or [Docker](https://docker.com/products/docker-desktop) (macOS/Linux)
+- [Apple Container](https://github.com/apple/container) (macOS) or [Docker](https://docker.com/products/docker-desktop) (macOS/Linux/Windows 11)
+
+On Windows 11, the orchestrator runs as a native Node.js process while agents
+run in Linux containers via Docker Desktop's WSL2 backend — enable file sharing
+for the drive holding the project. Setup registers a logon Scheduled Task
+(`schtasks`) instead of launchd/systemd.
 
 ## Architecture
 
@@ -158,6 +163,15 @@ Docker provides cross-platform support (macOS and Linux) and a mature ecosystem.
 **Can I run this on Linux?**
 
 Yes. Docker is the default runtime and works on both macOS and Linux. Just run `/setup`.
+
+**Can I run this on Windows 11?**
+
+Yes, natively — no WSL shell required for the orchestrator. Install Docker
+Desktop with the WSL2 backend (this is what actually runs the Linux agent
+containers) and enable file sharing for your project's drive, then run
+`/setup`. NanoClaw detects Windows, registers a logon Scheduled Task via
+`schtasks`, and writes a `start-nanoclaw.cmd` launcher. You can still run it
+inside a WSL2 Linux distro if you prefer (it detects as Linux in that case).
 
 **Is this secure?**
 

@@ -4,7 +4,7 @@
  *
  * Fixes: Root→system systemd, WSL nohup fallback, no `|| true` swallowing errors.
  */
-import { execSync } from 'child_process';
+import { execFileSync, execSync } from 'child_process';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
@@ -55,6 +55,8 @@ export async function run(_args: string[]): Promise<void> {
     setupLaunchd(projectRoot, nodePath, homeDir);
   } else if (platform === 'linux') {
     setupLinux(projectRoot, nodePath, homeDir);
+  } else if (platform === 'windows') {
+    setupWindows(projectRoot, nodePath);
   } else {
     emitStatus('SETUP_SERVICE', {
       SERVICE_TYPE: 'unknown',
@@ -68,8 +70,17 @@ export async function run(_args: string[]): Promise<void> {
   }
 }
 
-function setupLaunchd(projectRoot: string, nodePath: string, homeDir: string): void {
-  const plistPath = path.join(homeDir, 'Library', 'LaunchAgents', 'com.nanoclaw.plist');
+function setupLaunchd(
+  projectRoot: string,
+  nodePath: string,
+  homeDir: string,
+): void {
+  const plistPath = path.join(
+    homeDir,
+    'Library',
+    'LaunchAgents',
+    'com.nanoclaw.plist',
+  );
   fs.mkdirSync(path.dirname(plistPath), { recursive: true });
 
   const plist = `<?xml version="1.0" encoding="UTF-8"?>
@@ -107,7 +118,9 @@ function setupLaunchd(projectRoot: string, nodePath: string, homeDir: string): v
   logger.info({ plistPath }, 'Wrote launchd plist');
 
   try {
-    execSync(`launchctl load ${JSON.stringify(plistPath)}`, { stdio: 'ignore' });
+    execSync(`launchctl load ${JSON.stringify(plistPath)}`, {
+      stdio: 'ignore',
+    });
     logger.info('launchctl load succeeded');
   } catch {
     logger.warn('launchctl load failed (may already be loaded)');
@@ -133,7 +146,11 @@ function setupLaunchd(projectRoot: string, nodePath: string, homeDir: string): v
   });
 }
 
-function setupLinux(projectRoot: string, nodePath: string, homeDir: string): void {
+function setupLinux(
+  projectRoot: string,
+  nodePath: string,
+  homeDir: string,
+): void {
   const serviceManager = getServiceManager();
 
   if (serviceManager === 'systemd') {
@@ -186,7 +203,11 @@ function checkDockerGroupStale(): boolean {
   }
 }
 
-function setupSystemd(projectRoot: string, nodePath: string, homeDir: string): void {
+function setupSystemd(
+  projectRoot: string,
+  nodePath: string,
+  homeDir: string,
+): void {
   const runningAsRoot = isRoot();
 
   // Root uses system-level service, non-root uses user-level
@@ -202,7 +223,9 @@ function setupSystemd(projectRoot: string, nodePath: string, homeDir: string): v
     try {
       execSync('systemctl --user daemon-reload', { stdio: 'pipe' });
     } catch {
-      logger.warn('systemd user session not available — falling back to nohup wrapper');
+      logger.warn(
+        'systemd user session not available — falling back to nohup wrapper',
+      );
       setupNohupFallback(projectRoot, nodePath, homeDir);
       return;
     }
@@ -284,7 +307,11 @@ WantedBy=${runningAsRoot ? 'multi-user.target' : 'default.target'}`;
   });
 }
 
-function setupNohupFallback(projectRoot: string, nodePath: string, homeDir: string): void {
+function setupNohupFallback(
+  projectRoot: string,
+  nodePath: string,
+  homeDir: string,
+): void {
   logger.warn('No systemd detected — generating nohup wrapper script');
 
   const wrapperPath = path.join(projectRoot, 'start-nanoclaw.sh');
@@ -330,6 +357,89 @@ function setupNohupFallback(projectRoot: string, nodePath: string, homeDir: stri
     WRAPPER_PATH: wrapperPath,
     SERVICE_LOADED: false,
     FALLBACK: 'wsl_no_systemd',
+    STATUS: 'success',
+    LOG: 'logs/setup.log',
+  });
+}
+
+/** Scheduled-task name registered on Windows. */
+export const WINDOWS_TASK_NAME = 'NanoClaw';
+
+/**
+ * Generate the `.cmd` launcher that the Windows scheduled task runs at logon.
+ * Uses win32-style paths and CRLF line endings so it is valid regardless of
+ * the host the setup runs from.
+ */
+export function generateWindowsLauncher(
+  projectRoot: string,
+  nodePath: string,
+): string {
+  const indexJs = path.win32.join(projectRoot, 'dist', 'index.js');
+  const outLog = path.win32.join(projectRoot, 'logs', 'nanoclaw.log');
+  const errLog = path.win32.join(projectRoot, 'logs', 'nanoclaw.error.log');
+  return [
+    '@echo off',
+    `cd /d "${projectRoot}"`,
+    `"${nodePath}" "${indexJs}" >> "${outLog}" 2>> "${errLog}"`,
+    '',
+  ].join('\r\n');
+}
+
+/**
+ * Build the `schtasks` argument vector that registers NanoClaw to start at
+ * logon. Returned as an argv array so it can be passed to execFileSync without
+ * shell quoting concerns; the launcher path is wrapped in quotes because
+ * schtasks treats `/TR` as a single command string.
+ */
+export function windowsScheduledTaskArgs(
+  taskName: string,
+  launcherPath: string,
+): string[] {
+  return [
+    '/Create',
+    '/F', // overwrite an existing task of the same name
+    '/TN',
+    taskName,
+    '/TR',
+    `"${launcherPath}"`,
+    '/SC',
+    'ONLOGON',
+    '/RL',
+    'LIMITED',
+  ];
+}
+
+function setupWindows(projectRoot: string, nodePath: string): void {
+  const launcherPath = path.win32.join(projectRoot, 'start-nanoclaw.cmd');
+  fs.writeFileSync(
+    launcherPath,
+    generateWindowsLauncher(projectRoot, nodePath),
+  );
+  logger.info({ launcherPath }, 'Wrote Windows launcher script');
+
+  let serviceLoaded = false;
+  try {
+    execFileSync(
+      'schtasks',
+      windowsScheduledTaskArgs(WINDOWS_TASK_NAME, launcherPath),
+      { stdio: 'ignore' },
+    );
+    serviceLoaded = true;
+    logger.info(
+      { taskName: WINDOWS_TASK_NAME },
+      'Registered Windows scheduled task',
+    );
+  } catch (err) {
+    logger.error({ err }, 'schtasks /Create failed');
+  }
+
+  emitStatus('SETUP_SERVICE', {
+    SERVICE_TYPE: 'schtasks',
+    NODE_PATH: nodePath,
+    PROJECT_PATH: projectRoot,
+    LAUNCHER_PATH: launcherPath,
+    TASK_NAME: WINDOWS_TASK_NAME,
+    SERVICE_LOADED: serviceLoaded,
     STATUS: 'success',
     LOG: 'logs/setup.log',
   });

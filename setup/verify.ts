@@ -13,7 +13,13 @@ import Database from 'better-sqlite3';
 
 import { STORE_DIR } from '../src/config.js';
 import { logger } from '../src/logger.js';
-import { getPlatform, getServiceManager, hasSystemd, isRoot } from './platform.js';
+import {
+  commandExists,
+  getPlatform,
+  getServiceManager,
+  hasSystemd,
+  isRoot,
+} from './platform.js';
 import { emitStatus } from './status.js';
 
 export async function run(_args: string[]): Promise<void> {
@@ -48,13 +54,22 @@ export async function run(_args: string[]): Promise<void> {
       service = 'running';
     } catch {
       try {
-        const output = execSync(`${prefix} list-unit-files`, { encoding: 'utf-8' });
+        const output = execSync(`${prefix} list-unit-files`, {
+          encoding: 'utf-8',
+        });
         if (output.includes('nanoclaw')) {
           service = 'stopped';
         }
       } catch {
         // systemctl not available
       }
+    }
+  } else if (mgr === 'schtasks') {
+    try {
+      execSync('schtasks /Query /TN NanoClaw', { stdio: 'pipe' });
+      service = 'running';
+    } catch {
+      // Task not registered
     }
   } else {
     // Check for nohup PID file
@@ -73,12 +88,12 @@ export async function run(_args: string[]): Promise<void> {
   }
   logger.info({ service }, 'Service status');
 
-  // 2. Check container runtime
+  // 2. Check container runtime (commandExists is cross-platform; `command -v`
+  // is a POSIX builtin that does not exist on native Windows)
   let containerRuntime = 'none';
-  try {
-    execSync('command -v container', { stdio: 'ignore' });
+  if (commandExists('container')) {
     containerRuntime = 'apple-container';
-  } catch {
+  } else {
     try {
       execSync('docker info', { stdio: 'ignore' });
       containerRuntime = 'docker';
@@ -110,9 +125,9 @@ export async function run(_args: string[]): Promise<void> {
   if (fs.existsSync(dbPath)) {
     try {
       const db = new Database(dbPath, { readonly: true });
-      const row = db.prepare(
-        'SELECT COUNT(*) as count FROM registered_groups',
-      ).get() as { count: number };
+      const row = db
+        .prepare('SELECT COUNT(*) as count FROM registered_groups')
+        .get() as { count: number };
       registeredGroups = row.count;
       db.close();
     } catch {
@@ -122,7 +137,11 @@ export async function run(_args: string[]): Promise<void> {
 
   // 6. Check mount allowlist
   let mountAllowlist = 'missing';
-  if (fs.existsSync(path.join(homeDir, '.config', 'nanoclaw', 'mount-allowlist.json'))) {
+  if (
+    fs.existsSync(
+      path.join(homeDir, '.config', 'nanoclaw', 'mount-allowlist.json'),
+    )
+  ) {
     mountAllowlist = 'configured';
   }
 

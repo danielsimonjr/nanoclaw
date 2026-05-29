@@ -51,6 +51,12 @@ launchctl kickstart -k gui/$(id -u)/com.nanoclaw  # restart
 systemctl --user start nanoclaw
 systemctl --user stop nanoclaw
 systemctl --user restart nanoclaw
+
+# Windows 11 (Scheduled Task, runs at logon)
+schtasks /Run /TN NanoClaw      # start now
+schtasks /End /TN NanoClaw      # stop
+schtasks /Query /TN NanoClaw    # status
+# Orchestrator runs natively; agents run in Linux containers via Docker Desktop (WSL2 backend).
 ```
 
 ## Container Build Cache

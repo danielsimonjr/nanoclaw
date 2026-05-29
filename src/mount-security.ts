@@ -216,6 +216,26 @@ function findAllowedRoot(
 }
 
 /**
+ * Whether a host path contains a disallowed colon.
+ *
+ * The volume flag is built as `host:container[:mode]`, so a colon in the host
+ * path can inject extra fields (e.g. a `:rw` mode override that would defeat a
+ * read-only mount). On Windows a single leading drive-letter colon (e.g.
+ * `C:\Users\me`) is legitimate and must be permitted; every other colon —
+ * including NTFS alternate-data-stream syntax like `file:stream` — is rejected.
+ *
+ * @internal exported so the Windows branch can be tested on any platform.
+ */
+export function hostPathHasDisallowedColon(
+  hostPath: string,
+  platform: NodeJS.Platform = process.platform,
+): boolean {
+  const withoutDrive =
+    platform === 'win32' ? hostPath.replace(/^[A-Za-z]:/, '') : hostPath;
+  return withoutDrive.includes(':');
+}
+
+/**
  * Validate the container path to prevent escaping /workspace/extra/
  */
 function isValidContainerPath(containerPath: string): boolean {
@@ -286,11 +306,14 @@ export function validateMount(
       reason: `Invalid host path: must be a non-empty string`,
     };
   }
-  // eslint-disable-next-line no-control-regex
-  if (mount.hostPath.includes(':') || /[\x00-\x1f]/.test(mount.hostPath)) {
+  if (
+    hostPathHasDisallowedColon(mount.hostPath) ||
+    // eslint-disable-next-line no-control-regex
+    /[\x00-\x1f]/.test(mount.hostPath)
+  ) {
     return {
       allowed: false,
-      reason: `Invalid host path: must not contain ":" or control characters`,
+      reason: `Invalid host path: must not contain ":" (except a Windows drive letter) or control characters`,
     };
   }
 
