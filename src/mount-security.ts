@@ -119,6 +119,16 @@ export function loadMountAllowlist(): MountAllowlist | null {
 }
 
 /**
+ * Reset the in-memory allowlist cache. Test-only: the allowlist is otherwise
+ * cached for the lifetime of the process, which prevents tests from exercising
+ * different allowlist configurations.
+ */
+export function _resetMountAllowlistCache(): void {
+  cachedAllowlist = null;
+  allowlistLoadError = null;
+}
+
+/**
  * Expand ~ to home directory and resolve to absolute path
  */
 function expandPath(p: string): string {
@@ -145,24 +155,33 @@ function getRealPath(p: string): string | null {
 }
 
 /**
- * Check if a path matches any blocked pattern
+ * Check if a path matches any blocked pattern.
+ *
+ * Matching is case-insensitive: on case-insensitive filesystems (macOS,
+ * Windows) a directory named `.SSH` or `Credentials` resolves to the same
+ * sensitive data as `.ssh`/`credentials`, so the blocklist must catch those
+ * variants too. Lowercasing only ever blocks *more*, never less, so it is
+ * also a safe defense-in-depth measure on case-sensitive filesystems.
  */
 function matchesBlockedPattern(
   realPath: string,
   blockedPatterns: string[],
 ): string | null {
-  const pathParts = realPath.split(path.sep);
+  const lowerPath = realPath.toLowerCase();
+  const pathParts = lowerPath.split(path.sep);
 
   for (const pattern of blockedPatterns) {
+    const lowerPattern = pattern.toLowerCase();
+
     // Check if any path component matches the pattern
     for (const part of pathParts) {
-      if (part === pattern || part.includes(pattern)) {
+      if (part === lowerPattern || part.includes(lowerPattern)) {
         return pattern;
       }
     }
 
     // Also check if the full path contains the pattern
-    if (realPath.includes(pattern)) {
+    if (lowerPath.includes(lowerPattern)) {
       return pattern;
     }
   }
@@ -200,6 +219,11 @@ function findAllowedRoot(
  * Validate the container path to prevent escaping /workspace/extra/
  */
 function isValidContainerPath(containerPath: string): boolean {
+  // Must be a non-empty string
+  if (typeof containerPath !== 'string' || containerPath.trim() === '') {
+    return false;
+  }
+
   // Must not contain .. to prevent path traversal
   if (containerPath.includes('..')) {
     return false;
@@ -210,8 +234,17 @@ function isValidContainerPath(containerPath: string): boolean {
     return false;
   }
 
-  // Must not be empty
-  if (!containerPath || containerPath.trim() === '') {
+  // Must not contain ':' — the volume flag is built as `host:container[:mode]`,
+  // so a colon in the container path injects extra fields (e.g. a `:rw` mode
+  // override that would defeat a read-only mount).
+  if (containerPath.includes(':')) {
+    return false;
+  }
+
+  // Must not contain null bytes or other control characters that could
+  // truncate or corrupt the mount argument passed to the container runtime.
+  // eslint-disable-next-line no-control-regex
+  if (/[\x00-\x1f]/.test(containerPath)) {
     return false;
   }
 
@@ -241,6 +274,23 @@ export function validateMount(
     return {
       allowed: false,
       reason: `No mount allowlist configured at ${MOUNT_ALLOWLIST_PATH}`,
+    };
+  }
+
+  // hostPath is attacker-influenced (it arrives via the register_group IPC
+  // containerConfig). Reject anything that isn't a usable absolute-ish string
+  // before handing it to path/fs APIs that would otherwise throw.
+  if (typeof mount.hostPath !== 'string' || mount.hostPath.trim() === '') {
+    return {
+      allowed: false,
+      reason: `Invalid host path: must be a non-empty string`,
+    };
+  }
+  // eslint-disable-next-line no-control-regex
+  if (mount.hostPath.includes(':') || /[\x00-\x1f]/.test(mount.hostPath)) {
+    return {
+      allowed: false,
+      reason: `Invalid host path: must not contain ":" or control characters`,
     };
   }
 
