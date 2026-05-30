@@ -179,6 +179,41 @@ describe('container-runner timeout behavior', () => {
     expect(onOutput).not.toHaveBeenCalled();
   });
 
+  it('reassembles an output marker split across stdout chunks', async () => {
+    const seen: ContainerOutput[] = [];
+    const onOutput = vi.fn(async (o: ContainerOutput) => {
+      seen.push(o);
+    });
+    const resultPromise = runContainerAgent(
+      testGroup,
+      testInput,
+      () => {},
+      onOutput,
+    );
+
+    const json = JSON.stringify({
+      status: 'success',
+      result: 'split-result',
+      newSessionId: 'sess-split',
+    });
+    // Marker arrives in three separate chunks, splitting the JSON payload.
+    fakeProc.stdout.push(`${OUTPUT_START_MARKER}\n${json.slice(0, 10)}`);
+    await vi.advanceTimersByTimeAsync(1);
+    fakeProc.stdout.push(json.slice(10));
+    await vi.advanceTimersByTimeAsync(1);
+    fakeProc.stdout.push(`\n${OUTPUT_END_MARKER}\n`);
+    await vi.advanceTimersByTimeAsync(1);
+
+    fakeProc.emit('close', 0);
+    await vi.advanceTimersByTimeAsync(10);
+
+    const result = await resultPromise;
+    expect(result.status).toBe('success');
+    expect(result.newSessionId).toBe('sess-split');
+    expect(seen).toHaveLength(1);
+    expect(seen[0].result).toBe('split-result');
+  });
+
   it('normal exit after output resolves as success', async () => {
     const onOutput = vi.fn(async () => {});
     const resultPromise = runContainerAgent(

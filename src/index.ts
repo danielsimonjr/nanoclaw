@@ -275,16 +275,15 @@ async function runAgent(
     new Set(Object.keys(registeredGroups)),
   );
 
-  // Wrap onOutput to track session ID from streamed results
-  const wrappedOnOutput = onOutput
-    ? async (output: ContainerOutput) => {
-        if (output.newSessionId) {
-          sessions[group.folder] = output.newSessionId;
-          setSession(group.folder, output.newSessionId);
-        }
-        await onOutput(output);
-      }
-    : undefined;
+  // Wrap onOutput to track session ID from streamed results (session tracking
+  // happens regardless of whether a caller-supplied onOutput is present).
+  const wrappedOnOutput = async (output: ContainerOutput) => {
+    if (output.newSessionId) {
+      sessions[group.folder] = output.newSessionId;
+      setSession(group.folder, output.newSessionId);
+    }
+    if (onOutput) await onOutput(output);
+  };
 
   try {
     const output = await runContainerAgent(
