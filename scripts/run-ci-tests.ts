@@ -14,20 +14,6 @@ interface TestResult {
   error?: string;
 }
 
-function copyDirRecursive(src: string, dest: string, exclude: string[] = []): void {
-  fs.mkdirSync(dest, { recursive: true });
-  for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
-    if (exclude.includes(entry.name)) continue;
-    const srcPath = path.join(src, entry.name);
-    const destPath = path.join(dest, entry.name);
-    if (entry.isDirectory()) {
-      copyDirRecursive(srcPath, destPath, exclude);
-    } else {
-      fs.copyFileSync(srcPath, destPath);
-    }
-  }
-}
-
 async function runMatrixEntry(
   projectRoot: string,
   entry: MatrixEntry,
