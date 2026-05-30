@@ -175,7 +175,10 @@ function matchesBlockedPattern(
       }
     }
 
-    // Also check if the full path contains the pattern
+    // Also check the full path as a substring. This overlaps the per-component
+    // check above, but the redundancy is intentional defense-in-depth — do not
+    // "optimize" it away, as it guards against patterns that could otherwise
+    // slip through future changes to the component-splitting logic.
     if (lowerPath.includes(lowerPattern)) {
       return pattern;
     }

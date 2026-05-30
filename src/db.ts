@@ -30,7 +30,7 @@ function createSchema(database: Database.Database): void {
       sender_name TEXT,
       content TEXT,
       timestamp TEXT,
-      is_from_me INTEGER,
+      is_from_me INTEGER, -- retained for audit/debugging; not read back in queries
       is_bot_message INTEGER DEFAULT 0,
       PRIMARY KEY (id, chat_jid),
       FOREIGN KEY (chat_jid) REFERENCES chats(jid)
