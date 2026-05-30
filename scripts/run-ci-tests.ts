@@ -6,6 +6,7 @@ import os from 'os';
 import path from 'path';
 
 import { generateMatrix, MatrixEntry } from './generate-ci-matrix.js';
+import { copyDir } from '../skills-engine/fs-utils.js';
 
 interface TestResult {
   entry: MatrixEntry;
@@ -35,7 +36,7 @@ async function runMatrixEntry(
 
   try {
     // Copy project to temp dir (exclude heavy/irrelevant dirs)
-    copyDirRecursive(projectRoot, tmpDir, [
+    copyDir(projectRoot, tmpDir, [
       'node_modules',
       '.git',
       'dist',
