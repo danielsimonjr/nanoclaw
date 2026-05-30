@@ -9,7 +9,7 @@ import fs from 'fs';
 import path from 'path';
 
 /** Recursively collect file paths under a directory, sorted for stable hashing. */
-export function listFilesRecursive(dir: string): string[] {
+function listFilesRecursive(dir: string): string[] {
   const out: string[] = [];
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name);

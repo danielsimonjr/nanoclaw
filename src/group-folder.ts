@@ -8,14 +8,14 @@ const RESERVED_FOLDERS = new Set(['global']);
 export function isValidGroupFolder(folder: string): boolean {
   if (!folder) return false;
   if (folder !== folder.trim()) return false;
+  // The pattern excludes '/', '\\' and '.', so path separators and '..'
+  // traversal are already impossible — no separate checks needed.
   if (!GROUP_FOLDER_PATTERN.test(folder)) return false;
-  if (folder.includes('/') || folder.includes('\\')) return false;
-  if (folder.includes('..')) return false;
   if (RESERVED_FOLDERS.has(folder.toLowerCase())) return false;
   return true;
 }
 
-export function assertValidGroupFolder(folder: string): void {
+function assertValidGroupFolder(folder: string): void {
   if (!isValidGroupFolder(folder)) {
     throw new Error(`Invalid group folder "${folder}"`);
   }

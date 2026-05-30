@@ -21,20 +21,9 @@ export function stripInternalTags(text: string): string {
   return text.replace(/<internal>[\s\S]*?<\/internal>/g, '').trim();
 }
 
+// Strip internal-only markup before sending a message outbound.
 export function formatOutbound(rawText: string): string {
-  const text = stripInternalTags(rawText);
-  if (!text) return '';
-  return text;
-}
-
-export function routeOutbound(
-  channels: Channel[],
-  jid: string,
-  text: string,
-): Promise<void> {
-  const channel = channels.find((c) => c.ownsJid(jid) && c.isConnected());
-  if (!channel) throw new Error(`No channel for JID: ${jid}`);
-  return channel.sendMessage(jid, text);
+  return stripInternalTags(rawText);
 }
 
 export function findChannel(

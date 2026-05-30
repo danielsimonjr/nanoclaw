@@ -48,6 +48,7 @@ function createSchema(database: Database.Database): void {
       last_run TEXT,
       last_result TEXT,
       status TEXT DEFAULT 'active',
+      context_mode TEXT DEFAULT 'isolated',
       created_at TEXT NOT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_next_run ON scheduled_tasks(next_run);
@@ -248,33 +249,6 @@ export function setLastGroupSync(): void {
  * Only call this for registered groups where message history is needed.
  */
 export function storeMessage(msg: NewMessage): void {
-  db.prepare(
-    `INSERT OR REPLACE INTO messages (id, chat_jid, sender, sender_name, content, timestamp, is_from_me, is_bot_message) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-  ).run(
-    msg.id,
-    msg.chat_jid,
-    msg.sender,
-    msg.sender_name,
-    msg.content,
-    msg.timestamp,
-    msg.is_from_me ? 1 : 0,
-    msg.is_bot_message ? 1 : 0,
-  );
-}
-
-/**
- * Store a message directly (for non-WhatsApp channels that don't use Baileys proto).
- */
-export function storeMessageDirect(msg: {
-  id: string;
-  chat_jid: string;
-  sender: string;
-  sender_name: string;
-  content: string;
-  timestamp: string;
-  is_from_me: boolean;
-  is_bot_message?: boolean;
-}): void {
   db.prepare(
     `INSERT OR REPLACE INTO messages (id, chat_jid, sender, sender_name, content, timestamp, is_from_me, is_bot_message) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
   ).run(
@@ -516,29 +490,26 @@ export function getAllSessions(): Record<string, string> {
 
 // --- Registered group accessors ---
 
-export function getRegisteredGroup(
-  jid: string,
-): (RegisteredGroup & { jid: string }) | undefined {
-  const row = db
-    .prepare('SELECT * FROM registered_groups WHERE jid = ?')
-    .get(jid) as
-    | {
-        jid: string;
-        name: string;
-        folder: string;
-        trigger_pattern: string;
-        added_at: string;
-        container_config: string | null;
-        requires_trigger: number | null;
-      }
-    | undefined;
-  if (!row) return undefined;
+interface RegisteredGroupRow {
+  jid: string;
+  name: string;
+  folder: string;
+  trigger_pattern: string;
+  added_at: string;
+  container_config: string | null;
+  requires_trigger: number | null;
+}
+
+/** Map a registered_groups row to a RegisteredGroup, or null if its folder is unsafe. */
+function mapRegisteredGroupRow(
+  row: RegisteredGroupRow,
+): (RegisteredGroup & { jid: string }) | null {
   if (!isValidGroupFolder(row.folder)) {
     logger.warn(
       { jid: row.jid, folder: row.folder },
       'Skipping registered group with invalid folder',
     );
-    return undefined;
+    return null;
   }
   return {
     jid: row.jid,
@@ -552,6 +523,16 @@ export function getRegisteredGroup(
     requiresTrigger:
       row.requires_trigger === null ? undefined : row.requires_trigger === 1,
   };
+}
+
+export function getRegisteredGroup(
+  jid: string,
+): (RegisteredGroup & { jid: string }) | undefined {
+  const row = db
+    .prepare('SELECT * FROM registered_groups WHERE jid = ?')
+    .get(jid) as RegisteredGroupRow | undefined;
+  if (!row) return undefined;
+  return mapRegisteredGroupRow(row) ?? undefined;
 }
 
 export function setRegisteredGroup(jid: string, group: RegisteredGroup): void {
@@ -573,35 +554,16 @@ export function setRegisteredGroup(jid: string, group: RegisteredGroup): void {
 }
 
 export function getAllRegisteredGroups(): Record<string, RegisteredGroup> {
-  const rows = db.prepare('SELECT * FROM registered_groups').all() as Array<{
-    jid: string;
-    name: string;
-    folder: string;
-    trigger_pattern: string;
-    added_at: string;
-    container_config: string | null;
-    requires_trigger: number | null;
-  }>;
+  const rows = db
+    .prepare('SELECT * FROM registered_groups')
+    .all() as RegisteredGroupRow[];
   const result: Record<string, RegisteredGroup> = {};
   for (const row of rows) {
-    if (!isValidGroupFolder(row.folder)) {
-      logger.warn(
-        { jid: row.jid, folder: row.folder },
-        'Skipping registered group with invalid folder',
-      );
-      continue;
+    const mapped = mapRegisteredGroupRow(row);
+    if (mapped) {
+      const { jid, ...group } = mapped;
+      result[jid] = group;
     }
-    result[row.jid] = {
-      name: row.name,
-      folder: row.folder,
-      trigger: row.trigger_pattern,
-      added_at: row.added_at,
-      containerConfig: row.container_config
-        ? JSON.parse(row.container_config)
-        : undefined,
-      requiresTrigger:
-        row.requires_trigger === null ? undefined : row.requires_trigger === 1,
-    };
   }
   return result;
 }
