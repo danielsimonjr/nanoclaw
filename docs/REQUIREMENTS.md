@@ -175,7 +175,7 @@ A personal Claude assistant accessible via WhatsApp, with minimal custom code.
 - `/update` - Pull upstream changes, merge with customizations, run migrations
 
 ### Deployment
-- Runs locally via launchd (macOS), systemd/nohup (Linux), or a logon Scheduled Task (Windows 11)
+- Runs locally via launchd (macOS), systemd/nohup (Linux), or a logon Scheduled Task (Windows 10/11)
 - Single Node.js process handles everything; agents run in Linux containers (Docker / Apple Container)
 
 ---

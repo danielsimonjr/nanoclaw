@@ -54,7 +54,7 @@ systemctl --user start nanoclaw
 systemctl --user stop nanoclaw
 systemctl --user restart nanoclaw
 
-# Windows 11 (Scheduled Task, runs at logon)
+# Windows 10/11 (Scheduled Task, runs at logon)
 schtasks /Run /TN NanoClaw      # start now
 schtasks /End /TN NanoClaw      # stop
 schtasks /Query /TN NanoClaw    # status
