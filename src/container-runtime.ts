@@ -59,7 +59,7 @@ export function resolveRuntime(
 }
 
 /** Whether a command is resolvable on PATH, cross-platform. */
-export function isCommandAvailable(bin: string): boolean {
+function isCommandAvailable(bin: string): boolean {
   try {
     const probe =
       process.platform === 'win32' ? `where ${bin}` : `command -v ${bin}`;

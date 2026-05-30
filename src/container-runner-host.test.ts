@@ -104,7 +104,12 @@ beforeEach(() => {
 describe('host mode dispatch', () => {
   it('returns a clear error when the agent-runner is not built', async () => {
     agentBuilt.exists = false;
-    const result = await runContainerAgent(GROUP, { ...INPUT }, () => {});
+    const result = await runContainerAgent(
+      GROUP,
+      { ...INPUT },
+      () => {},
+      async () => {},
+    );
     expect(result.status).toBe('error');
     expect(result.error).toMatch(/agent-runner to be built/i);
     expect(spawnMock.fn).not.toHaveBeenCalled();
@@ -115,7 +120,12 @@ describe('host mode dispatch', () => {
     const proc = makeFakeProc();
     spawnMock.fn.mockReturnValue(proc);
 
-    const promise = runContainerAgent(GROUP, { ...INPUT }, () => {});
+    const promise = runContainerAgent(
+      GROUP,
+      { ...INPUT },
+      () => {},
+      async () => {},
+    );
 
     // Let the spawn happen, then complete the run.
     await new Promise((r) => setImmediate(r));
@@ -141,11 +151,11 @@ describe('host mode dispatch', () => {
     const result = await promise;
     expect(result.status).toBe('success');
 
-    // A per-run host log is written (parity with container mode).
+    // A per-run log is written (parity with container mode).
     const fsMock = (await import('fs')).default;
-    const wroteHostLog = (
+    const wroteRunLog = (
       fsMock.writeFileSync as unknown as ReturnType<typeof vi.fn>
-    ).mock.calls.some((c: unknown[]) => String(c[0]).includes('host-'));
-    expect(wroteHostLog).toBe(true);
+    ).mock.calls.some((c: unknown[]) => String(c[0]).includes('agent-'));
+    expect(wroteRunLog).toBe(true);
   });
 });

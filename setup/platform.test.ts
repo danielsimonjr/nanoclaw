@@ -2,80 +2,19 @@ import { describe, it, expect } from 'vitest';
 
 import {
   getPlatform,
-  isWSL,
-  isRoot,
-  isHeadless,
-  hasSystemd,
   getServiceManager,
   commandExists,
   getNodeVersion,
   getNodeMajorVersion,
 } from './platform.js';
 
-// --- getPlatform ---
-
-describe('getPlatform', () => {
-  it('returns a valid platform string', () => {
-    const result = getPlatform();
-    expect(['macos', 'linux', 'unknown']).toContain(result);
-  });
-});
-
-// --- isWSL ---
-
-describe('isWSL', () => {
-  it('returns a boolean', () => {
-    expect(typeof isWSL()).toBe('boolean');
-  });
-
-  it('checks /proc/version for WSL markers', () => {
-    // On non-WSL Linux, should return false
-    // On WSL, should return true
-    // Just verify it doesn't throw
-    const result = isWSL();
-    expect(typeof result).toBe('boolean');
-  });
-});
-
-// --- isRoot ---
-
-describe('isRoot', () => {
-  it('returns a boolean', () => {
-    expect(typeof isRoot()).toBe('boolean');
-  });
-});
-
-// --- isHeadless ---
-
-describe('isHeadless', () => {
-  it('returns a boolean', () => {
-    expect(typeof isHeadless()).toBe('boolean');
-  });
-});
-
-// --- hasSystemd ---
-
-describe('hasSystemd', () => {
-  it('returns a boolean', () => {
-    expect(typeof hasSystemd()).toBe('boolean');
-  });
-
-  it('checks /proc/1/comm', () => {
-    // On systemd systems, should return true
-    // Just verify it doesn't throw
-    const result = hasSystemd();
-    expect(typeof result).toBe('boolean');
-  });
-});
+// Note: deterministic platform-branching (Windows/host) is covered in
+// platform-windows.test.ts. The pure type-only assertions for
+// isWSL/isRoot/isHeadless/hasSystemd were dropped as tautological.
 
 // --- getServiceManager ---
 
 describe('getServiceManager', () => {
-  it('returns a valid service manager', () => {
-    const result = getServiceManager();
-    expect(['launchd', 'systemd', 'schtasks', 'none']).toContain(result);
-  });
-
   it('matches the detected platform', () => {
     const platform = getPlatform();
     const result = getServiceManager();

@@ -6,25 +6,12 @@ import os from 'os';
 import path from 'path';
 
 import { generateMatrix, MatrixEntry } from './generate-ci-matrix.js';
+import { copyDir } from '../skills-engine/fs-utils.js';
 
 interface TestResult {
   entry: MatrixEntry;
   passed: boolean;
   error?: string;
-}
-
-function copyDirRecursive(src: string, dest: string, exclude: string[] = []): void {
-  fs.mkdirSync(dest, { recursive: true });
-  for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
-    if (exclude.includes(entry.name)) continue;
-    const srcPath = path.join(src, entry.name);
-    const destPath = path.join(dest, entry.name);
-    if (entry.isDirectory()) {
-      copyDirRecursive(srcPath, destPath, exclude);
-    } else {
-      fs.copyFileSync(srcPath, destPath);
-    }
-  }
 }
 
 async function runMatrixEntry(
@@ -35,7 +22,7 @@ async function runMatrixEntry(
 
   try {
     // Copy project to temp dir (exclude heavy/irrelevant dirs)
-    copyDirRecursive(projectRoot, tmpDir, [
+    copyDir(projectRoot, tmpDir, [
       'node_modules',
       '.git',
       'dist',

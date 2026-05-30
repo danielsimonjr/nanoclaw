@@ -9,15 +9,10 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import pino from 'pino';
 
 import { MOUNT_ALLOWLIST_PATH } from './config.js';
+import { logger } from './logger.js';
 import { AdditionalMount, AllowedRoot, MountAllowlist } from './types.js';
-
-const logger = pino({
-  level: process.env.LOG_LEVEL || 'info',
-  transport: { target: 'pino-pretty', options: { colorize: true } },
-});
 
 // Cache the allowlist in memory - only reloads on process restart
 let cachedAllowlist: MountAllowlist | null = null;
@@ -180,7 +175,10 @@ function matchesBlockedPattern(
       }
     }
 
-    // Also check if the full path contains the pattern
+    // Also check the full path as a substring. This overlaps the per-component
+    // check above, but the redundancy is intentional defense-in-depth — do not
+    // "optimize" it away, as it guards against patterns that could otherwise
+    // slip through future changes to the component-splitting logic.
     if (lowerPath.includes(lowerPattern)) {
       return pattern;
     }

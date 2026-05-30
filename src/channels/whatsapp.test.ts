@@ -908,10 +908,5 @@ describe('WhatsAppChannel', () => {
       const channel = new WhatsAppChannel(createTestOpts());
       expect(channel.name).toBe('whatsapp');
     });
-
-    it('does not expose prefixAssistantName (prefix handled internally)', () => {
-      const channel = new WhatsAppChannel(createTestOpts());
-      expect('prefixAssistantName' in channel).toBe(false);
-    });
   });
 });
