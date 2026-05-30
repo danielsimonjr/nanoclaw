@@ -8,6 +8,7 @@ import {
   BASE_INCLUDES,
   NANOCLAW_DIR,
 } from './constants.js';
+import { copyDir } from './fs-utils.js';
 import { isGitRepo } from './merge.js';
 import { writeState } from './state.js';
 import { SkillState } from './types.js';
@@ -47,7 +48,7 @@ export function initNanoclawDir(): void {
     const stat = fs.statSync(srcPath);
 
     if (stat.isDirectory()) {
-      copyDirFiltered(srcPath, destPath, BASE_EXCLUDES);
+      copyDir(srcPath, destPath, BASE_EXCLUDES);
     } else {
       fs.mkdirSync(path.dirname(destPath), { recursive: true });
       fs.copyFileSync(srcPath, destPath);
@@ -69,23 +70,6 @@ export function initNanoclawDir(): void {
       execSync('git config --local rerere.enabled true', { stdio: 'pipe' });
     } catch {
       // Non-fatal
-    }
-  }
-}
-
-function copyDirFiltered(src: string, dest: string, excludes: string[]): void {
-  fs.mkdirSync(dest, { recursive: true });
-
-  for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
-    if (excludes.includes(entry.name)) continue;
-
-    const srcPath = path.join(src, entry.name);
-    const destPath = path.join(dest, entry.name);
-
-    if (entry.isDirectory()) {
-      copyDirFiltered(srcPath, destPath, excludes);
-    } else {
-      fs.copyFileSync(srcPath, destPath);
     }
   }
 }
