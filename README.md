@@ -55,7 +55,7 @@ Then run `/setup`. Claude Code handles everything: dependencies, authentication,
 - **Scheduled tasks** - Recurring jobs that run Claude and can message you back
 - **Web access** - Search and fetch content
 - **Container isolation** - Agents sandboxed in Apple Container (macOS) or Docker/Podman (macOS/Linux/Windows)
-- **Cross-platform** - Runs on macOS, Linux, and natively on Windows 11 (orchestrator runs natively; agents run in Linux containers via Docker Desktop's WSL2 backend)
+- **Cross-platform** - Runs on macOS, Linux, and natively on Windows 10/11 (orchestrator runs natively; agents run in Linux containers via Docker Desktop's WSL2 backend)
 - **Agent Swarms** - Spin up teams of specialized agents that collaborate on complex tasks (first personal AI assistant to support this)
 - **Optional integrations** - Add Gmail (`/add-gmail`) and more via skills
 
@@ -115,14 +115,14 @@ Skills we'd like to see:
 - `/add-slack` - Add Slack
 
 **Platform Support**
-- Windows 11 runs natively (Docker Desktop + WSL2 backend) or inside a WSL2 distro — both supported by `/setup`
+- Windows 10/11 runs natively (Docker Desktop + WSL2 backend) or inside a WSL2 distro — both supported by `/setup`
 
 **Session Management**
 - `/add-clear` - Add a `/clear` command that compacts the conversation (summarizes context while preserving critical information in the same session). Requires figuring out how to trigger compaction programmatically via the Claude Agent SDK.
 
 ## Requirements
 
-- macOS, Linux, or Windows 11
+- macOS, Linux, or Windows 10/11 (Windows 10 requires 64-bit version 2004 / build 19041 or later for the Docker Desktop WSL2 backend)
 - Node.js 20+
 - [Claude Code](https://claude.ai/download)
 - A container runtime (optional): [Docker](https://docker.com/products/docker-desktop), [Podman](https://podman.io/), or [Apple Container](https://github.com/apple/container) (macOS)
@@ -142,9 +142,12 @@ container sandbox away: the additional-mount allowlist no longer applies, the
 agent can access the host filesystem, and it inherits the orchestrator's
 environment variables. Use it only where you accept that.
 
-On Windows 11, the orchestrator runs as a native Node.js process while agents
+On Windows 10/11, the orchestrator runs as a native Node.js process while agents
 run in Linux containers via Docker Desktop's WSL2 backend — enable file sharing
-for the drive holding the project. Setup registers a logon Scheduled Task
+for the drive holding the project. (The orchestrator and setup are keyed purely
+on the `win32` platform, so Windows 10 and 11 behave identically; Windows 10
+just needs build 19041+ for the WSL2 backend, or use `CONTAINER_RUNTIME=host` to
+run without a container.) Setup registers a logon Scheduled Task
 (`schtasks`) instead of launchd/systemd. `better-sqlite3` ships prebuilt
 binaries for Windows x64, so `npm install` works out of the box; on
 unusual setups without a prebuild (e.g. arm64) install the
@@ -188,14 +191,17 @@ Yes — set `CONTAINER_RUNTIME=host`. The agent then runs as a normal host proce
 
 Yes. Docker is the default runtime and works on both macOS and Linux. Just run `/setup`.
 
-**Can I run this on Windows 11?**
+**Can I run this on Windows 10 or 11?**
 
-Yes, natively — no WSL shell required for the orchestrator. Install Docker
-Desktop with the WSL2 backend (this is what actually runs the Linux agent
-containers) and enable file sharing for your project's drive, then run
-`/setup`. NanoClaw detects Windows, registers a logon Scheduled Task via
-`schtasks`, and writes a `start-nanoclaw.cmd` launcher. You can still run it
-inside a WSL2 Linux distro if you prefer (it detects as Linux in that case).
+Yes, natively on both — no WSL shell required for the orchestrator. The code
+branches only on the `win32` platform, so Windows 10 and 11 are treated
+identically. Install Docker Desktop with the WSL2 backend (this is what actually
+runs the Linux agent containers; Windows 10 needs 64-bit build 19041+) and
+enable file sharing for your project's drive, then run `/setup`. NanoClaw
+detects Windows, registers a logon Scheduled Task via `schtasks`, and writes a
+`start-nanoclaw.cmd` launcher. You can still run it inside a WSL2 Linux distro if
+you prefer (it detects as Linux in that case), or set `CONTAINER_RUNTIME=host`
+to run with no container at all.
 
 **Is this secure?**
 
