@@ -160,30 +160,19 @@ export function storeChatMetadata(
   const ch = channel ?? null;
   const group = isGroup === undefined ? null : isGroup ? 1 : 0;
 
-  if (name) {
-    // Update with name, preserving existing timestamp if newer
-    db.prepare(
-      `
+  // Single upsert: new rows get `name` (or the jid as a fallback); on conflict
+  // the name is overwritten only when one was supplied (COALESCE(?, name)),
+  // otherwise the existing name is preserved. Timestamp keeps the newer value.
+  db.prepare(
+    `
       INSERT INTO chats (jid, name, last_message_time, channel, is_group) VALUES (?, ?, ?, ?, ?)
       ON CONFLICT(jid) DO UPDATE SET
-        name = excluded.name,
+        name = COALESCE(?, name),
         last_message_time = MAX(last_message_time, excluded.last_message_time),
         channel = COALESCE(excluded.channel, channel),
         is_group = COALESCE(excluded.is_group, is_group)
     `,
-    ).run(chatJid, name, timestamp, ch, group);
-  } else {
-    // Update timestamp only, preserve existing name if any
-    db.prepare(
-      `
-      INSERT INTO chats (jid, name, last_message_time, channel, is_group) VALUES (?, ?, ?, ?, ?)
-      ON CONFLICT(jid) DO UPDATE SET
-        last_message_time = MAX(last_message_time, excluded.last_message_time),
-        channel = COALESCE(excluded.channel, channel),
-        is_group = COALESCE(excluded.is_group, is_group)
-    `,
-    ).run(chatJid, chatJid, timestamp, ch, group);
-  }
+  ).run(chatJid, name ?? chatJid, timestamp, ch, group, name ?? null);
 }
 
 /**
