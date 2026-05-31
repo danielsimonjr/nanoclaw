@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 
 import {
   ASSISTANT_NAME,
@@ -516,11 +517,13 @@ async function main(): Promise<void> {
   });
 }
 
-// Guard: only run when executed directly, not when imported by tests
+// Guard: only run when executed directly, not when imported by tests.
+// Compare via fileURLToPath + path.resolve (both use native path semantics), so
+// this works on Windows where `new URL("file://" + argv[1])` would mis-parse a
+// backslash drive path and leave the orchestrator silently never starting.
 const isDirectRun =
-  process.argv[1] &&
-  new URL(import.meta.url).pathname ===
-    new URL(`file://${process.argv[1]}`).pathname;
+  !!process.argv[1] &&
+  fileURLToPath(import.meta.url) === path.resolve(process.argv[1]);
 
 if (isDirectRun) {
   main().catch((err) => {

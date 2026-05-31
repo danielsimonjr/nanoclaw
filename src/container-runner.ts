@@ -269,7 +269,7 @@ interface AgentProcessConfig {
   label: string;
   /** Streamed-result callback (invoked once per OUTPUT marker pair). */
   onOutput: (output: ContainerOutput) => Promise<void>;
-  /** Graceful stop on hard timeout (e.g. `docker stop`, or SIGTERM+SIGKILL). */
+  /** Stop the agent on hard timeout (e.g. `docker stop`, or _close + terminate). */
   stop: () => void;
   /** Extra lines (args/mounts or command/cwd) for verbose/error run logs. */
   detail: string[];
@@ -603,9 +603,19 @@ function runHostAgent(
   onProcess(proc, label);
 
   const stop = () => {
-    proc.kill('SIGTERM');
-    // Force-kill if SIGTERM is ignored; unref so this timer never keeps the
-    // event loop alive after the process has already exited.
+    // Ask the agent to wind down cleanly first by writing the IPC _close
+    // sentinel its poll loop watches for. This is the only graceful path on
+    // Windows, where proc.kill('SIGTERM') is an immediate TerminateProcess (no
+    // catchable signal) — so without this the agent can't flush on a timeout.
+    try {
+      fs.mkdirSync(path.join(groupIpcDir, 'input'), { recursive: true });
+      fs.writeFileSync(path.join(groupIpcDir, 'input', '_close'), '');
+    } catch {
+      /* best effort */
+    }
+    // Then terminate. On POSIX this is a real SIGTERM; on Windows it maps to an
+    // immediate process termination. Force-kill if still alive after a grace
+    // period; unref so the timer never keeps the event loop alive on its own.
     const killTimer = setTimeout(() => {
       try {
         proc.kill('SIGKILL');
@@ -614,6 +624,7 @@ function runHostAgent(
       }
     }, 5000);
     killTimer.unref?.();
+    proc.kill('SIGTERM');
   };
 
   return driveAgentProcess({

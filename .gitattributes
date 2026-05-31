@@ -1,3 +1,7 @@
+# Default: normalize text to LF in the repo (prevents CRLF creep on Windows
+# clones); binary files are auto-detected and left untouched.
+* text=auto eol=lf
+
 # Windows batch scripts must use CRLF line endings to run under cmd.exe.
 *.bat text eol=crlf
 *.cmd text eol=crlf

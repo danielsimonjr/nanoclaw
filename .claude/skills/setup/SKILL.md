@@ -46,14 +46,18 @@ Check the preflight results for `APPLE_CONTAINER` and `DOCKER`, and the PLATFORM
 - PLATFORM=linux → Docker (only option)
 - PLATFORM=macos + APPLE_CONTAINER=installed → Use `AskUserQuestion: Docker (default, cross-platform) or Apple Container (native macOS)?` If Apple Container, run `/convert-to-apple-container` now, then skip to 3c.
 - PLATFORM=macos + APPLE_CONTAINER=not_found → Docker (default)
+- PLATFORM=windows → Use `AskUserQuestion: Docker Desktop (Linux containers via WSL2) or host mode (no container, runs agents natively — no Docker)?`
+  - **Host mode:** add `CONTAINER_RUNTIME=host` to `.env`, run `npm run build:agent`, then skip directly to step 10 (no image build needed). Warn the user host mode removes the container sandbox (agents get host filesystem access).
+  - **Docker:** continue to 3a-docker.
 
 ### 3a-docker. Install Docker
 
 - DOCKER=running → continue to 3b
-- DOCKER=installed_not_running → start Docker: `open -a Docker` (macOS) or `sudo systemctl start docker` (Linux). Wait 15s, re-check with `docker info`.
-- DOCKER=not_found → Use `AskUserQuestion: Docker is required for running agents. Would you like me to install it?` If confirmed:
+- DOCKER=installed_not_running → start Docker: `open -a Docker` (macOS), `sudo systemctl start docker` (Linux), or on Windows start Docker Desktop from the Start menu / system tray (or `Start-Process "C:\Program Files\Docker\Docker\Docker Desktop.exe"`). Wait 15s, re-check with `docker info`.
+- DOCKER=not_found → Use `AskUserQuestion: Docker is required for running agents (or use host mode). Would you like me to install Docker?` If confirmed:
   - macOS: install via `brew install --cask docker`, then `open -a Docker` and wait for it to start. If brew not available, direct to Docker Desktop download at https://docker.com/products/docker-desktop
   - Linux: install with `curl -fsSL https://get.docker.com | sh && sudo usermod -aG docker $USER`. Note: user may need to log out/in for group membership.
+  - Windows: `winget install Docker.DockerDesktop`, or direct to https://docker.com/products/docker-desktop. After install, ensure the WSL2 backend is enabled and turn on file sharing for the drive holding the project (Docker Desktop → Settings → Resources → File sharing). Or offer host mode instead (no Docker): `CONTAINER_RUNTIME=host` in `.env` + `npm run build:agent`.
 
 ### 3b. Apple Container conversion gate (if needed)
 
@@ -144,7 +148,7 @@ If service already running: unload first.
 
 Run `npx tsx setup/index.ts --step service` and parse the status block. The step picks the right service manager per platform: launchd (macOS), systemd or a nohup wrapper (Linux/WSL), or a logon Scheduled Task via `schtasks` (Windows).
 
-**If SERVICE_TYPE=schtasks (Windows):** Setup registered a logon Scheduled Task (`NanoClaw`) and wrote a `start-nanoclaw.cmd` launcher. Start it now with `schtasks /Run /TN NanoClaw`; it then auto-starts at each logon. Agents need Docker Desktop running (WSL2 backend) unless `CONTAINER_RUNTIME=host`.
+**If SERVICE_TYPE=schtasks (Windows):** Setup registered a logon Scheduled Task (`NanoClaw`) and wrote a `start-nanoclaw.cmd` launcher (which restarts node on crash, mirroring launchd KeepAlive / systemd Restart=always). Start it now with `schtasks /Run /TN NanoClaw`; it then auto-starts at each logon. Agents need Docker Desktop running (WSL2 backend) unless `CONTAINER_RUNTIME=host`.
 
 **If FALLBACK=no_systemd:** A non-systemd Linux/WSL host was detected. Tell user they can either enable systemd in WSL (`echo -e "[boot]\nsystemd=true" | sudo tee /etc/wsl.conf` then restart WSL) or use the generated `start-nanoclaw.sh` wrapper.
 
@@ -186,10 +190,10 @@ Tell user to test: send a message in their registered chat. Show: `tail -f logs/
 
 **Service not starting:** Check `logs/nanoclaw.error.log`. Common: wrong Node path (re-run step 10), missing `.env` (step 4), missing auth (step 5).
 
-**Container agent fails ("Claude Code process exited with code 1"):** Ensure the container runtime is running — `open -a Docker` (macOS Docker), `container system start` (Apple Container), or `sudo systemctl start docker` (Linux). Check container logs in `groups/main/logs/container-*.log`.
+**Container agent fails ("Claude Code process exited with code 1"):** Ensure the container runtime is running — `open -a Docker` (macOS Docker), `container system start` (Apple Container), `sudo systemctl start docker` (Linux), or start Docker Desktop from the Start menu / system tray (Windows). Check container logs in `groups/main/logs/agent-*.log`. (In host mode there is no container — if the agent fails, confirm `npm run build:agent` was run and check the same logs.)
 
 **No response to messages:** Check trigger pattern. Main channel doesn't need prefix. Check DB: `npx tsx setup/index.ts --step verify`. Check `logs/nanoclaw.log`.
 
-**WhatsApp disconnected:** `npm run auth` then rebuild and restart: `npm run build && launchctl kickstart -k gui/$(id -u)/com.nanoclaw` (macOS) or `systemctl --user restart nanoclaw` (Linux).
+**WhatsApp disconnected:** `npm run auth` then rebuild and restart: `npm run build && launchctl kickstart -k gui/$(id -u)/com.nanoclaw` (macOS), `systemctl --user restart nanoclaw` (Linux), or `npm run build && schtasks /End /TN NanoClaw && schtasks /Run /TN NanoClaw` (Windows).
 
-**Unload service:** macOS: `launchctl unload ~/Library/LaunchAgents/com.nanoclaw.plist` | Linux: `systemctl --user stop nanoclaw`
+**Unload service:** macOS: `launchctl unload ~/Library/LaunchAgents/com.nanoclaw.plist` | Linux: `systemctl --user stop nanoclaw` | Windows: `schtasks /End /TN NanoClaw && schtasks /Delete /F /TN NanoClaw`

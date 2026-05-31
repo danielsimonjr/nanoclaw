@@ -202,6 +202,13 @@ describe('Windows launcher generation', () => {
   it('uses CRLF line endings for cmd compatibility', () => {
     expect(generateWindowsLauncher(projectRoot, nodePath)).toContain('\r\n');
   });
+
+  it('restarts node on crash (KeepAlive/Restart=always parity)', () => {
+    const cmd = generateWindowsLauncher(projectRoot, nodePath);
+    expect(cmd).toContain(':restart');
+    expect(cmd).toContain('goto restart');
+    expect(cmd).toContain('timeout /t 5');
+  });
 });
 
 describe('Windows scheduled-task arguments', () => {

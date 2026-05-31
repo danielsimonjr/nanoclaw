@@ -59,8 +59,20 @@ export async function run(_args: string[]): Promise<void> {
     }
   } else if (mgr === 'schtasks') {
     try {
-      execSync('schtasks /Query /TN NanoClaw', { stdio: 'pipe' });
-      service = 'running';
+      // /FO CSV /NH yields: "TaskName","Next Run Time","Status". The task
+      // exists (exit 0) whether Ready/Disabled/Running, so check the Status
+      // column rather than treating any registered task as "running".
+      const out = execSync('schtasks /Query /TN NanoClaw /FO CSV /NH', {
+        encoding: 'utf-8',
+        stdio: ['ignore', 'pipe', 'pipe'],
+      });
+      const status = out
+        .trim()
+        .split(',')[2]
+        ?.replace(/"/g, '')
+        .trim()
+        .toLowerCase();
+      service = status === 'running' ? 'running' : 'stopped';
     } catch {
       // Task not registered
     }
