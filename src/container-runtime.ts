@@ -12,6 +12,7 @@
  */
 import { execSync } from 'child_process';
 
+import { readEnvFile } from './env.js';
 import { logger } from './logger.js';
 
 export type RuntimeKind = 'container' | 'host';
@@ -70,10 +71,17 @@ function isCommandAvailable(bin: string): boolean {
   }
 }
 
-const resolved = resolveRuntime(
-  process.env.CONTAINER_RUNTIME,
-  isCommandAvailable,
-);
+/**
+ * The configured runtime selection. Prefer the process environment, but fall
+ * back to the `.env` file so it can be set once (e.g. `CONTAINER_RUNTIME=host`)
+ * and apply to both `npm start` and the OS service/scheduled task, which do not
+ * necessarily inherit an interactively-set env var.
+ */
+const CONTAINER_RUNTIME =
+  process.env.CONTAINER_RUNTIME ||
+  readEnvFile(['CONTAINER_RUNTIME']).CONTAINER_RUNTIME;
+
+const resolved = resolveRuntime(CONTAINER_RUNTIME, isCommandAvailable);
 
 /** The selected runtime kind ('container' or 'host'). */
 export const RUNTIME_KIND: RuntimeKind = resolved.kind;
