@@ -565,7 +565,7 @@ function runHostAgent(
       result: null,
       error:
         `Host mode requires the agent-runner to be built first: ` +
-        `cd container/agent-runner && npm install && npm run build (missing ${agentEntry})`,
+        `run \`npm run build:agent\` from the project root (missing ${agentEntry})`,
     });
   }
 

@@ -226,6 +226,17 @@ function createSanitizeBashHook(): HookCallback {
     const command = (preInput.tool_input as { command?: string })?.command;
     if (!command) return {};
 
+    // Defense-in-depth: strip auth secrets from the Bash subprocess env. This
+    // is a POSIX `unset` prefix, which is only valid in a POSIX shell. In a
+    // container the Bash tool always runs on Linux, so prefix there. In host
+    // mode on native Windows the shell is cmd.exe/PowerShell where `unset ...`
+    // is invalid and would corrupt every command — and it's unnecessary anyway
+    // because secrets are kept out of process.env (they live only in the SDK's
+    // env), so the subprocess never inherits them. Skip the prefix there.
+    if (process.platform === 'win32') {
+      return {};
+    }
+
     const unsetPrefix = `unset ${SECRET_ENV_VARS.join(' ')} 2>/dev/null; `;
     return {
       hookSpecificOutput: {
