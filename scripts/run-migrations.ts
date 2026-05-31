@@ -7,12 +7,21 @@ import { compareSemver } from '../skills-engine/state.js';
 
 // Resolve tsx binary once to avoid npx race conditions across migrations
 function resolveTsx(): string {
-  // Check local node_modules first
-  const local = path.resolve('node_modules/.bin/tsx');
-  if (fs.existsSync(local)) return local;
-  // Fall back to whichever tsx is in PATH
+  // Check local node_modules first. On Windows the launcher is tsx.cmd; on
+  // POSIX it's the extension-less `tsx` shim.
+  const isWindows = process.platform === 'win32';
+  const localCandidates = isWindows
+    ? ['node_modules/.bin/tsx.cmd', 'node_modules/.bin/tsx']
+    : ['node_modules/.bin/tsx'];
+  for (const candidate of localCandidates) {
+    const local = path.resolve(candidate);
+    if (fs.existsSync(local)) return local;
+  }
+  // Fall back to whichever tsx is in PATH (`where` on Windows, `command -v`
+  // on POSIX — `which` does not exist on native Windows).
   try {
-    return execSync('which tsx', { encoding: 'utf-8' }).trim();
+    const probe = isWindows ? 'where tsx' : 'command -v tsx';
+    return execSync(probe, { encoding: 'utf-8' }).trim().split(/\r?\n/)[0];
   } catch {
     return 'npx'; // last resort
   }
@@ -43,9 +52,7 @@ const results: MigrationResult[] = [];
 const migrationsDir = path.join(newCorePath, 'migrations');
 
 if (!fs.existsSync(migrationsDir)) {
-  console.log(
-    JSON.stringify({ migrationsRun: 0, results: [] }, null, 2),
-  );
+  console.log(JSON.stringify({ migrationsRun: 0, results: [] }, null, 2));
   process.exit(0);
 }
 
@@ -84,18 +91,13 @@ for (const version of migrationVersions) {
     });
     results.push({ version, success: true });
   } catch (err) {
-    const message =
-      err instanceof Error ? err.message : String(err);
+    const message = err instanceof Error ? err.message : String(err);
     results.push({ version, success: false, error: message });
   }
 }
 
 console.log(
-  JSON.stringify(
-    { migrationsRun: results.length, results },
-    null,
-    2,
-  ),
+  JSON.stringify({ migrationsRun: results.length, results }, null, 2),
 );
 
 // Exit with error if any migration failed
