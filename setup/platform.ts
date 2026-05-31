@@ -67,8 +67,11 @@ export function openBrowser(url: string): boolean {
     }
     if (platform === 'windows') {
       // `start` is a cmd.exe builtin; the first quoted argument is the window
-      // title, so an empty "" must precede the URL.
-      execSync(`start "" ${JSON.stringify(url)}`, { stdio: 'ignore' });
+      // title, so an empty "" must precede the target. Use plain double-quotes,
+      // NOT JSON.stringify — cmd.exe does not process `\\` escapes inside quotes,
+      // so a stringified Windows path (C:\\Users\\...) would be passed verbatim
+      // with doubled backslashes and fail to open.
+      execSync(`start "" "${url}"`, { stdio: 'ignore' });
       return true;
     }
     if (platform === 'linux') {

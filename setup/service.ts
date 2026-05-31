@@ -375,10 +375,16 @@ export function generateWindowsLauncher(
   const indexJs = path.win32.join(projectRoot, 'dist', 'index.js');
   const outLog = path.win32.join(projectRoot, 'logs', 'nanoclaw.log');
   const errLog = path.win32.join(projectRoot, 'logs', 'nanoclaw.error.log');
+  // Restart-on-crash loop so the agent self-recovers, mirroring launchd
+  // KeepAlive=true / systemd Restart=always. The scheduled task starts this at
+  // logon; if node exits (crash/OOM) it is relaunched after a short delay.
   return [
     '@echo off',
     `cd /d "${projectRoot}"`,
+    ':restart',
     `"${nodePath}" "${indexJs}" >> "${outLog}" 2>> "${errLog}"`,
+    'timeout /t 5 /nobreak >nul',
+    'goto restart',
     '',
   ].join('\r\n');
 }
