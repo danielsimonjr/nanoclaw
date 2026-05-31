@@ -519,7 +519,10 @@ async function runQuery(
       settingSources: ['project', 'user'],
       mcpServers: {
         nanoclaw: {
-          command: 'node',
+          // Use the absolute path to the current Node binary rather than a bare
+          // 'node' so the MCP server spawns reliably regardless of PATH — in
+          // host mode on Windows the scheduled task's PATH may not include node.
+          command: process.execPath,
           args: [mcpServerPath],
           env: {
             NANOCLAW_CHAT_JID: containerInput.chatJid,

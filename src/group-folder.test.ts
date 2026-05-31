@@ -22,6 +22,26 @@ describe('group folder validation', () => {
     expect(isValidGroupFolder('')).toBe(false);
   });
 
+  it('rejects Windows reserved device names (any case)', () => {
+    for (const name of [
+      'con',
+      'CON',
+      'nul',
+      'aux',
+      'prn',
+      'com1',
+      'COM9',
+      'lpt1',
+      'lpt9',
+    ]) {
+      expect(isValidGroupFolder(name), name).toBe(false);
+    }
+    // Names that merely contain a reserved token are fine.
+    expect(isValidGroupFolder('console')).toBe(true);
+    expect(isValidGroupFolder('com10')).toBe(true);
+    expect(isValidGroupFolder('my-con')).toBe(true);
+  });
+
   it('resolves safe paths under groups directory', () => {
     const resolved = resolveGroupFolderPath('family-chat');
     expect(resolved.endsWith(`${path.sep}groups${path.sep}family-chat`)).toBe(
