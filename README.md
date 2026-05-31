@@ -140,9 +140,43 @@ Docker is **optional**. The container runtime is chosen with the
 `npm run build:agent` from the project root — and trades the container sandbox
 away: the additional-mount allowlist no longer applies, the agent can access the
 host filesystem, and it inherits the orchestrator's environment variables. Use
-it only where you accept that. This is the way to run on Windows without Docker:
-set `CONTAINER_RUNTIME=host`, build the agent-runner, and the agent runs as a
-native Windows process — no WSL2 or Docker Desktop required.
+it only where you accept that.
+
+#### Run on Windows without Docker (host mode)
+
+To run the agents directly on Windows 10/11 with **no Docker and no WSL2**, set
+`CONTAINER_RUNTIME=host`. The simplest, persistent way is to put it in your
+`.env` file (NanoClaw reads `CONTAINER_RUNTIME` from `.env` as well as the
+environment, so it also applies to the logon Scheduled Task started by setup):
+
+1. Build the agent-runner once:
+
+   ```powershell
+   npm run build:agent
+   ```
+
+2. Add the runtime selection to `.env` (create the file if it doesn't exist):
+
+   ```powershell
+   echo CONTAINER_RUNTIME=host>> .env
+   ```
+
+   (or just add a line `CONTAINER_RUNTIME=host` to `.env` in an editor.)
+
+3. Run setup as usual (`/setup`, or `setup.bat` for the bootstrap), then start it.
+   To run it directly without the scheduled task:
+
+   ```powershell
+   npm run build
+   npm start
+   ```
+
+Prefer setting it only for the current shell instead of `.env`? Use
+`set CONTAINER_RUNTIME=host` (cmd.exe) or `$env:CONTAINER_RUNTIME = "host"`
+(PowerShell) before `npm start` — but note a one-shot shell variable is **not**
+inherited by the logon Scheduled Task, so use `.env` (or `setx CONTAINER_RUNTIME host`
+for a persistent user-level variable) if you want host mode to apply to the
+auto-started service too.
 
 On Windows 10/11, the orchestrator runs as a native Node.js process. By default
 agents run in Linux containers via Docker Desktop's WSL2 backend — enable file

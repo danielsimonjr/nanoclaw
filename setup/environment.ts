@@ -78,8 +78,14 @@ export async function run(_args: string[]): Promise<void> {
     }
   }
 
-  // Explicit runtime override (auto | docker | podman | container | host)
-  const containerRuntime = process.env.CONTAINER_RUNTIME || 'auto';
+  // Explicit runtime override (auto | docker | podman | container | host).
+  // Read from the environment, falling back to .env (matches how the runtime
+  // itself resolves the value at startup).
+  const { readEnvFile } = await import('../src/env.js');
+  const containerRuntime =
+    process.env.CONTAINER_RUNTIME ||
+    readEnvFile(['CONTAINER_RUNTIME']).CONTAINER_RUNTIME ||
+    'auto';
 
   logger.info(
     {
