@@ -18,9 +18,12 @@ detect_platform() {
   local uname_s
   uname_s=$(uname -s)
   case "$uname_s" in
-    Darwin*) PLATFORM="macos" ;;
-    Linux*)  PLATFORM="linux" ;;
-    *)       PLATFORM="unknown" ;;
+    Darwin*)            PLATFORM="macos" ;;
+    Linux*)             PLATFORM="linux" ;;
+    # Git Bash / MSYS2 / Cygwin report these. On native Windows prefer setup.bat,
+    # but recognize the platform here so this script still works if invoked.
+    MINGW*|MSYS*|CYGWIN*) PLATFORM="windows" ;;
+    *)                  PLATFORM="unknown" ;;
   esac
 
   IS_WSL="false"
@@ -111,6 +114,10 @@ check_build_tools() {
     if command -v gcc >/dev/null 2>&1 && command -v make >/dev/null 2>&1; then
       HAS_BUILD_TOOLS="true"
     fi
+  elif [ "$PLATFORM" = "windows" ]; then
+    # better-sqlite3 ships prebuilt Windows binaries, so native build tools are
+    # usually unnecessary. NATIVE_OK above is the real signal.
+    HAS_BUILD_TOOLS="true"
   fi
 
   log "Build tools: $HAS_BUILD_TOOLS"

@@ -5,7 +5,7 @@ description: Run initial NanoClaw setup. Use when user wants to install dependen
 
 # NanoClaw Setup
 
-Run setup steps automatically. Only pause when user action is required (WhatsApp authentication, configuration choices). Setup uses `bash setup.sh` for bootstrap, then `npx tsx setup/index.ts --step <name>` for all other steps. Steps emit structured status blocks to stdout. Verbose logs go to `logs/setup.log`.
+Run setup steps automatically. Only pause when user action is required (WhatsApp authentication, configuration choices). Setup uses a bootstrap script (`bash setup.sh` on macOS/Linux/WSL, or `setup.bat` on native Windows) for bootstrap, then `npx tsx setup/index.ts --step <name>` for all other steps. Steps emit structured status blocks to stdout. Verbose logs go to `logs/setup.log`.
 
 **Principle:** When something is broken or missing, fix it. Don't tell the user to go fix it themselves unless it genuinely requires their manual action (e.g. scanning a QR code, pasting a secret token). If a dependency is missing, install it. If a service won't start, diagnose and repair. Ask the user for permission when needed, then do the work.
 
@@ -13,15 +13,21 @@ Run setup steps automatically. Only pause when user action is required (WhatsApp
 
 ## 1. Bootstrap (Node.js + Dependencies)
 
-Run `bash setup.sh` and parse the status block.
+Pick the bootstrap command for the OS:
+
+- **macOS / Linux / WSL:** `bash setup.sh`
+- **Native Windows (cmd.exe / PowerShell, not WSL):** `setup.bat` (or `cmd /c setup.bat`)
+
+Both emit the same status block (PLATFORM, NODE_OK, DEPS_OK, NATIVE_OK, …). Parse it and:
 
 - If NODE_OK=false → Node.js is missing or too old. Use `AskUserQuestion: Would you like me to install Node.js 22?` If confirmed:
   - macOS: `brew install node@22` (if brew available) or install nvm then `nvm install 22`
   - Linux: `curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - && sudo apt-get install -y nodejs`, or nvm
-  - After installing Node, re-run `bash setup.sh`
-- If DEPS_OK=false → Read `logs/setup.log`. Try: delete `node_modules` and `package-lock.json`, re-run `bash setup.sh`. If native module build fails, install build tools (`xcode-select --install` on macOS, `build-essential` on Linux), then retry.
+  - Windows: `winget install OpenJS.NodeJS.LTS` (or direct the user to https://nodejs.org), then reopen the terminal
+  - After installing Node, re-run the bootstrap command
+- If DEPS_OK=false → Read `logs/setup.log`. Try: delete `node_modules` and `package-lock.json`, re-run the bootstrap. If native module build fails, install build tools (`xcode-select --install` on macOS, `build-essential` on Linux). On Windows `better-sqlite3` ships prebuilt x64 binaries so this is rare; on arm64/unusual setups install the Visual Studio Build Tools.
 - If NATIVE_OK=false → better-sqlite3 failed to load. Install build tools and re-run.
-- Record PLATFORM and IS_WSL for later steps.
+- Record PLATFORM and IS_WSL for later steps. On native Windows, agents run in Linux containers via Docker Desktop's WSL2 backend, or set `CONTAINER_RUNTIME=host` to run without a container.
 
 ## 2. Check Environment
 
@@ -134,10 +140,13 @@ AskUserQuestion: Agent access to external directories?
 If service already running: unload first.
 - macOS: `launchctl unload ~/Library/LaunchAgents/com.nanoclaw.plist`
 - Linux: `systemctl --user stop nanoclaw` (or `systemctl stop nanoclaw` if root)
+- Windows: `schtasks /End /TN NanoClaw` (stop the running task)
 
-Run `npx tsx setup/index.ts --step service` and parse the status block.
+Run `npx tsx setup/index.ts --step service` and parse the status block. The step picks the right service manager per platform: launchd (macOS), systemd or a nohup wrapper (Linux/WSL), or a logon Scheduled Task via `schtasks` (Windows).
 
-**If FALLBACK=wsl_no_systemd:** WSL without systemd detected. Tell user they can either enable systemd in WSL (`echo -e "[boot]\nsystemd=true" | sudo tee /etc/wsl.conf` then restart WSL) or use the generated `start-nanoclaw.sh` wrapper.
+**If SERVICE_TYPE=schtasks (Windows):** Setup registered a logon Scheduled Task (`NanoClaw`) and wrote a `start-nanoclaw.cmd` launcher. Start it now with `schtasks /Run /TN NanoClaw`; it then auto-starts at each logon. Agents need Docker Desktop running (WSL2 backend) unless `CONTAINER_RUNTIME=host`.
+
+**If FALLBACK=no_systemd:** A non-systemd Linux/WSL host was detected. Tell user they can either enable systemd in WSL (`echo -e "[boot]\nsystemd=true" | sudo tee /etc/wsl.conf` then restart WSL) or use the generated `start-nanoclaw.sh` wrapper.
 
 **If DOCKER_GROUP_STALE=true:** The user was added to the docker group after their session started — the systemd service can't reach the Docker socket. Ask user to run these two commands:
 
@@ -164,7 +173,7 @@ Replace `USERNAME` with the actual username (from `whoami`). Run the two `sudo` 
 Run `npx tsx setup/index.ts --step verify` and parse the status block.
 
 **If STATUS=failed, fix each:**
-- SERVICE=stopped → `npm run build`, then restart: `launchctl kickstart -k gui/$(id -u)/com.nanoclaw` (macOS) or `systemctl --user restart nanoclaw` (Linux) or `bash start-nanoclaw.sh` (WSL nohup)
+- SERVICE=stopped → `npm run build`, then restart: `launchctl kickstart -k gui/$(id -u)/com.nanoclaw` (macOS) or `systemctl --user restart nanoclaw` (Linux) or `bash start-nanoclaw.sh` (WSL nohup) or `schtasks /Run /TN NanoClaw` (Windows)
 - SERVICE=not_found → re-run step 10
 - CREDENTIALS=missing → re-run step 4
 - WHATSAPP_AUTH=not_found → re-run step 5

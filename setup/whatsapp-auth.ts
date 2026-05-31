@@ -2,11 +2,12 @@
  * Step: whatsapp-auth — Full WhatsApp auth flow with polling.
  * Replaces 04-auth-whatsapp.sh
  */
-import { execSync, spawn } from 'child_process';
+import { spawn } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 
 import { logger } from '../src/logger.js';
+import { runNodeScript } from './node-script.js';
 import { openBrowser, isHeadless } from './platform.js';
 import { emitStatus } from './status.js';
 
@@ -243,12 +244,20 @@ async function handleQrBrowser(
     process.exit(3);
   }
 
-  // Generate QR SVG and HTML
-  const qrData = fs.readFileSync(qrFile, 'utf-8');
+  // Generate QR SVG and HTML. Read the QR data from the file inside the script
+  // (rather than interpolating it into a shell command) so it is portable to
+  // Windows cmd.exe and immune to quoting issues.
   try {
-    const svg = execSync(
-      `node -e "const QR=require('qrcode');const data=${JSON.stringify(qrData)};QR.toString(data,{type:'svg'},(e,s)=>{if(e)process.exit(1);process.stdout.write(s)})"`,
-      { cwd: projectRoot, encoding: 'utf-8' },
+    const svg = runNodeScript(
+      `import QR from 'qrcode';
+import fs from 'fs';
+const data = fs.readFileSync(${JSON.stringify(qrFile)}, 'utf-8');
+QR.toString(data, { type: 'svg' }, (e, s) => {
+  if (e) process.exit(1);
+  process.stdout.write(s);
+});
+`,
+      { cwd: projectRoot },
     );
     const html = QR_AUTH_TEMPLATE.replace('{{QR_SVG}}', svg);
     const htmlPath = path.join(projectRoot, 'store', 'qr-auth.html');
