@@ -1,0 +1,1120 @@
+{
+  "metadata": {
+    "name": "nanoclaw",
+    "version": "1.1.0",
+    "lastUpdated": "2026-05-31",
+    "totalFiles": 17,
+    "totalModules": 3,
+    "totalExports": 85
+  },
+  "entryPoints": [
+    {
+      "file": "src/index.ts",
+      "type": "main",
+      "description": "Get available groups list for the agent."
+    }
+  ],
+  "modules": {
+    "channels": {
+      "src/channels/whatsapp.ts": {
+        "description": "Sync group metadata from WhatsApp.",
+        "externalDependencies": [
+          {
+            "package": "@whiskeysockets/baileys",
+            "imports": [
+              "Browsers",
+              "DisconnectReason",
+              "WASocket",
+              "makeCacheableSignalKeyStore",
+              "useMultiFileAuthState",
+              "makeWASocket"
+            ]
+          }
+        ],
+        "nodeDependencies": [
+          {
+            "module": "child_process",
+            "imports": [
+              "exec"
+            ]
+          },
+          {
+            "module": "fs",
+            "imports": [
+              "fs"
+            ]
+          },
+          {
+            "module": "path",
+            "imports": [
+              "path"
+            ]
+          }
+        ],
+        "internalDependencies": [
+          {
+            "file": "../config.js",
+            "imports": [
+              "ASSISTANT_HAS_OWN_NUMBER",
+              "ASSISTANT_NAME",
+              "STORE_DIR"
+            ]
+          },
+          {
+            "file": "../db.js",
+            "imports": [
+              "getLastGroupSync",
+              "setLastGroupSync",
+              "updateChatName"
+            ]
+          },
+          {
+            "file": "../logger.js",
+            "imports": [
+              "logger"
+            ]
+          },
+          {
+            "file": "../types.js",
+            "imports": [
+              "Channel",
+              "OnInboundMessage",
+              "OnChatMetadata",
+              "RegisteredGroup"
+            ]
+          }
+        ],
+        "exports": [
+          "WhatsAppChannel"
+        ],
+        "classes": [
+          "WhatsAppChannel"
+        ],
+        "interfaces": [
+          "WhatsAppChannelOpts"
+        ]
+      }
+    },
+    "root": {
+      "src/config.ts": {
+        "description": "Read config values from .env (falls back to process.env).",
+        "externalDependencies": [],
+        "nodeDependencies": [
+          {
+            "module": "os",
+            "imports": [
+              "os"
+            ]
+          },
+          {
+            "module": "path",
+            "imports": [
+              "path"
+            ]
+          }
+        ],
+        "internalDependencies": [
+          {
+            "file": "./env.js",
+            "imports": [
+              "readEnvFile"
+            ]
+          }
+        ],
+        "exports": [
+          "ASSISTANT_NAME",
+          "ASSISTANT_HAS_OWN_NUMBER",
+          "POLL_INTERVAL",
+          "SCHEDULER_POLL_INTERVAL",
+          "MOUNT_ALLOWLIST_PATH",
+          "STORE_DIR",
+          "GROUPS_DIR",
+          "DATA_DIR",
+          "MAIN_GROUP_FOLDER",
+          "CONTAINER_IMAGE",
+          "CONTAINER_TIMEOUT",
+          "CONTAINER_MAX_OUTPUT_SIZE",
+          "IPC_POLL_INTERVAL",
+          "IDLE_TIMEOUT",
+          "MAX_CONCURRENT_CONTAINERS",
+          "TRIGGER_PATTERN",
+          "TIMEZONE"
+        ],
+        "constants": [
+          "ASSISTANT_NAME",
+          "ASSISTANT_HAS_OWN_NUMBER",
+          "POLL_INTERVAL",
+          "SCHEDULER_POLL_INTERVAL",
+          "MOUNT_ALLOWLIST_PATH",
+          "STORE_DIR",
+          "GROUPS_DIR",
+          "DATA_DIR",
+          "MAIN_GROUP_FOLDER",
+          "CONTAINER_IMAGE",
+          "CONTAINER_TIMEOUT",
+          "CONTAINER_MAX_OUTPUT_SIZE",
+          "IPC_POLL_INTERVAL",
+          "IDLE_TIMEOUT",
+          "MAX_CONCURRENT_CONTAINERS",
+          "TRIGGER_PATTERN",
+          "TIMEZONE"
+        ]
+      },
+      "src/container-runner.ts": {
+        "description": "Container Runner for NanoClaw",
+        "externalDependencies": [],
+        "nodeDependencies": [
+          {
+            "module": "child_process",
+            "imports": [
+              "ChildProcess",
+              "exec",
+              "spawn"
+            ]
+          },
+          {
+            "module": "fs",
+            "imports": [
+              "fs"
+            ]
+          },
+          {
+            "module": "path",
+            "imports": [
+              "path"
+            ]
+          }
+        ],
+        "internalDependencies": [
+          {
+            "file": "./config.js",
+            "imports": [
+              "CONTAINER_IMAGE",
+              "CONTAINER_MAX_OUTPUT_SIZE",
+              "CONTAINER_TIMEOUT",
+              "DATA_DIR",
+              "GROUPS_DIR",
+              "IDLE_TIMEOUT",
+              "TIMEZONE"
+            ]
+          },
+          {
+            "file": "./env.js",
+            "imports": [
+              "readEnvFile"
+            ]
+          },
+          {
+            "file": "./fs-sync.js",
+            "imports": [
+              "syncDirIfChanged"
+            ]
+          },
+          {
+            "file": "./group-folder.js",
+            "imports": [
+              "resolveGroupFolderPath",
+              "resolveGroupIpcPath"
+            ]
+          },
+          {
+            "file": "./logger.js",
+            "imports": [
+              "logger"
+            ]
+          },
+          {
+            "file": "./container-runtime.js",
+            "imports": [
+              "bindMountArgs",
+              "getContainerSpawnCommand",
+              "isHostMode",
+              "stopContainer"
+            ]
+          },
+          {
+            "file": "./mount-security.js",
+            "imports": [
+              "validateAdditionalMounts"
+            ]
+          },
+          {
+            "file": "./types.js",
+            "imports": [
+              "RegisteredGroup"
+            ]
+          }
+        ],
+        "exports": [
+          "runContainerAgent",
+          "writeTasksSnapshot",
+          "writeGroupsSnapshot"
+        ],
+        "interfaces": [
+          "ContainerInput",
+          "ContainerOutput",
+          "AvailableGroup"
+        ],
+        "functions": [
+          "runContainerAgent",
+          "writeTasksSnapshot",
+          "writeGroupsSnapshot"
+        ]
+      },
+      "src/container-runtime.ts": {
+        "description": "Container runtime abstraction for NanoClaw.",
+        "externalDependencies": [],
+        "nodeDependencies": [
+          {
+            "module": "child_process",
+            "imports": [
+              "execSync"
+            ]
+          }
+        ],
+        "internalDependencies": [
+          {
+            "file": "./logger.js",
+            "imports": [
+              "logger"
+            ]
+          }
+        ],
+        "exports": [
+          "RUNTIME_KIND",
+          "CONTAINER_RUNTIME_BIN",
+          "resolveRuntime",
+          "isHostMode",
+          "getContainerSpawnCommand",
+          "normalizeMountSource",
+          "bindMountArgs",
+          "readonlyMountArgs",
+          "stopContainer",
+          "ensureContainerRuntimeRunning",
+          "cleanupOrphans"
+        ],
+        "interfaces": [
+          "ResolvedRuntime"
+        ],
+        "functions": [
+          "resolveRuntime",
+          "isHostMode",
+          "getContainerSpawnCommand",
+          "normalizeMountSource",
+          "bindMountArgs",
+          "readonlyMountArgs",
+          "stopContainer",
+          "ensureContainerRuntimeRunning",
+          "cleanupOrphans"
+        ],
+        "constants": [
+          "RUNTIME_KIND",
+          "CONTAINER_RUNTIME_BIN"
+        ]
+      },
+      "src/db.ts": {
+        "description": "Store chat metadata only (no message content).",
+        "externalDependencies": [
+          {
+            "package": "better-sqlite3",
+            "imports": [
+              "Database"
+            ]
+          }
+        ],
+        "nodeDependencies": [
+          {
+            "module": "fs",
+            "imports": [
+              "fs"
+            ]
+          },
+          {
+            "module": "path",
+            "imports": [
+              "path"
+            ]
+          }
+        ],
+        "internalDependencies": [
+          {
+            "file": "./config.js",
+            "imports": [
+              "ASSISTANT_NAME",
+              "DATA_DIR",
+              "STORE_DIR"
+            ]
+          },
+          {
+            "file": "./group-folder.js",
+            "imports": [
+              "isValidGroupFolder"
+            ]
+          },
+          {
+            "file": "./logger.js",
+            "imports": [
+              "logger"
+            ]
+          },
+          {
+            "file": "./types.js",
+            "imports": [
+              "NewMessage",
+              "RegisteredGroup",
+              "ScheduledTask",
+              "TaskRunLog"
+            ]
+          }
+        ],
+        "exports": [
+          "initDatabase",
+          "_initTestDatabase",
+          "storeChatMetadata",
+          "updateChatName",
+          "getAllChats",
+          "getLastGroupSync",
+          "setLastGroupSync",
+          "storeMessage",
+          "getNewMessages",
+          "getMessagesSince",
+          "createTask",
+          "getTaskById",
+          "getTasksForGroup",
+          "getAllTasks",
+          "updateTask",
+          "deleteTask",
+          "getDueTasks",
+          "updateTaskAfterRun",
+          "logTaskRun",
+          "getRouterState",
+          "setRouterState",
+          "getSession",
+          "setSession",
+          "getAllSessions",
+          "getRegisteredGroup",
+          "setRegisteredGroup",
+          "getAllRegisteredGroups"
+        ],
+        "interfaces": [
+          "ChatInfo"
+        ],
+        "functions": [
+          "initDatabase",
+          "_initTestDatabase",
+          "storeChatMetadata",
+          "updateChatName",
+          "getAllChats",
+          "getLastGroupSync",
+          "setLastGroupSync",
+          "storeMessage",
+          "getNewMessages",
+          "getMessagesSince",
+          "createTask",
+          "getTaskById",
+          "getTasksForGroup",
+          "getAllTasks",
+          "updateTask",
+          "deleteTask",
+          "getDueTasks",
+          "updateTaskAfterRun",
+          "logTaskRun",
+          "getRouterState",
+          "setRouterState",
+          "getSession",
+          "setSession",
+          "getAllSessions",
+          "getRegisteredGroup",
+          "setRegisteredGroup",
+          "getAllRegisteredGroups"
+        ]
+      },
+      "src/env.ts": {
+        "description": "Parse the .env file and return values for the requested keys.",
+        "externalDependencies": [],
+        "nodeDependencies": [
+          {
+            "module": "fs",
+            "imports": [
+              "fs"
+            ]
+          },
+          {
+            "module": "path",
+            "imports": [
+              "path"
+            ]
+          }
+        ],
+        "internalDependencies": [
+          {
+            "file": "./logger.js",
+            "imports": [
+              "logger"
+            ]
+          }
+        ],
+        "exports": [
+          "readEnvFile"
+        ],
+        "functions": [
+          "readEnvFile"
+        ]
+      },
+      "src/fs-sync.ts": {
+        "description": "Content-aware directory sync helpers.",
+        "externalDependencies": [],
+        "nodeDependencies": [
+          {
+            "module": "crypto",
+            "imports": [
+              "crypto"
+            ]
+          },
+          {
+            "module": "fs",
+            "imports": [
+              "fs"
+            ]
+          },
+          {
+            "module": "path",
+            "imports": [
+              "path"
+            ]
+          }
+        ],
+        "internalDependencies": [],
+        "exports": [
+          "hashDir",
+          "syncDirIfChanged"
+        ],
+        "functions": [
+          "hashDir",
+          "syncDirIfChanged"
+        ]
+      },
+      "src/group-folder.ts": {
+        "description": "group-folder module",
+        "externalDependencies": [],
+        "nodeDependencies": [
+          {
+            "module": "path",
+            "imports": [
+              "path"
+            ]
+          }
+        ],
+        "internalDependencies": [
+          {
+            "file": "./config.js",
+            "imports": [
+              "DATA_DIR",
+              "GROUPS_DIR"
+            ]
+          }
+        ],
+        "exports": [
+          "isValidGroupFolder",
+          "resolveGroupFolderPath",
+          "resolveGroupIpcPath"
+        ],
+        "functions": [
+          "isValidGroupFolder",
+          "resolveGroupFolderPath",
+          "resolveGroupIpcPath"
+        ]
+      },
+      "src/group-queue.ts": {
+        "description": "Mark the container as idle-waiting (finished work, waiting for IPC input).",
+        "externalDependencies": [],
+        "nodeDependencies": [
+          {
+            "module": "child_process",
+            "imports": [
+              "ChildProcess"
+            ]
+          },
+          {
+            "module": "fs",
+            "imports": [
+              "fs"
+            ]
+          },
+          {
+            "module": "path",
+            "imports": [
+              "path"
+            ]
+          }
+        ],
+        "internalDependencies": [
+          {
+            "file": "./config.js",
+            "imports": [
+              "MAX_CONCURRENT_CONTAINERS"
+            ]
+          },
+          {
+            "file": "./group-folder.js",
+            "imports": [
+              "resolveGroupIpcPath"
+            ]
+          },
+          {
+            "file": "./logger.js",
+            "imports": [
+              "logger"
+            ]
+          }
+        ],
+        "exports": [
+          "GroupQueue"
+        ],
+        "classes": [
+          "GroupQueue"
+        ]
+      },
+      "src/ipc.ts": {
+        "description": "ipc module",
+        "externalDependencies": [
+          {
+            "package": "cron-parser",
+            "imports": [
+              "CronExpressionParser"
+            ]
+          }
+        ],
+        "nodeDependencies": [
+          {
+            "module": "fs",
+            "imports": [
+              "fs"
+            ]
+          },
+          {
+            "module": "path",
+            "imports": [
+              "path"
+            ]
+          }
+        ],
+        "internalDependencies": [
+          {
+            "file": "./config.js",
+            "imports": [
+              "DATA_DIR",
+              "IPC_POLL_INTERVAL",
+              "MAIN_GROUP_FOLDER",
+              "TIMEZONE"
+            ]
+          },
+          {
+            "file": "./container-runner.js",
+            "imports": [
+              "AvailableGroup"
+            ]
+          },
+          {
+            "file": "./db.js",
+            "imports": [
+              "createTask",
+              "deleteTask",
+              "getTaskById",
+              "updateTask"
+            ]
+          },
+          {
+            "file": "./group-folder.js",
+            "imports": [
+              "isValidGroupFolder"
+            ]
+          },
+          {
+            "file": "./logger.js",
+            "imports": [
+              "logger"
+            ]
+          },
+          {
+            "file": "./types.js",
+            "imports": [
+              "RegisteredGroup"
+            ]
+          }
+        ],
+        "exports": [
+          "_resetIpcWatcherForTests",
+          "startIpcWatcher",
+          "processTaskIpc"
+        ],
+        "interfaces": [
+          "IpcDeps"
+        ],
+        "functions": [
+          "_resetIpcWatcherForTests",
+          "startIpcWatcher",
+          "processTaskIpc"
+        ]
+      },
+      "src/logger.ts": {
+        "description": "Route uncaught errors through pino so they get timestamps in stderr",
+        "externalDependencies": [
+          {
+            "package": "pino",
+            "imports": [
+              "pino"
+            ]
+          }
+        ],
+        "nodeDependencies": [],
+        "internalDependencies": [],
+        "exports": [
+          "logger"
+        ],
+        "constants": [
+          "logger"
+        ]
+      },
+      "src/mount-security.ts": {
+        "description": "Mount Security Module for NanoClaw",
+        "externalDependencies": [],
+        "nodeDependencies": [
+          {
+            "module": "fs",
+            "imports": [
+              "fs"
+            ]
+          },
+          {
+            "module": "os",
+            "imports": [
+              "os"
+            ]
+          },
+          {
+            "module": "path",
+            "imports": [
+              "path"
+            ]
+          }
+        ],
+        "internalDependencies": [
+          {
+            "file": "./config.js",
+            "imports": [
+              "MOUNT_ALLOWLIST_PATH"
+            ]
+          },
+          {
+            "file": "./logger.js",
+            "imports": [
+              "logger"
+            ]
+          },
+          {
+            "file": "./types.js",
+            "imports": [
+              "AdditionalMount",
+              "AllowedRoot",
+              "MountAllowlist"
+            ]
+          }
+        ],
+        "exports": [
+          "loadMountAllowlist",
+          "_resetMountAllowlistCache",
+          "hostPathHasDisallowedColon",
+          "validateMount",
+          "validateAdditionalMounts",
+          "generateAllowlistTemplate"
+        ],
+        "interfaces": [
+          "MountValidationResult"
+        ],
+        "functions": [
+          "loadMountAllowlist",
+          "_resetMountAllowlistCache",
+          "hostPathHasDisallowedColon",
+          "validateMount",
+          "validateAdditionalMounts",
+          "generateAllowlistTemplate"
+        ]
+      },
+      "src/router.ts": {
+        "description": "Strip internal-only markup before sending a message outbound.",
+        "externalDependencies": [],
+        "nodeDependencies": [],
+        "internalDependencies": [
+          {
+            "file": "./types.js",
+            "imports": [
+              "Channel",
+              "NewMessage"
+            ]
+          }
+        ],
+        "exports": [
+          "escapeXml",
+          "formatMessages",
+          "stripInternalTags",
+          "formatOutbound",
+          "findChannel"
+        ],
+        "functions": [
+          "escapeXml",
+          "formatMessages",
+          "stripInternalTags",
+          "formatOutbound",
+          "findChannel"
+        ]
+      },
+      "src/task-scheduler.ts": {
+        "description": "task-scheduler module",
+        "externalDependencies": [
+          {
+            "package": "cron-parser",
+            "imports": [
+              "CronExpressionParser"
+            ]
+          }
+        ],
+        "nodeDependencies": [
+          {
+            "module": "child_process",
+            "imports": [
+              "ChildProcess"
+            ]
+          },
+          {
+            "module": "fs",
+            "imports": [
+              "fs"
+            ]
+          }
+        ],
+        "internalDependencies": [
+          {
+            "file": "./config.js",
+            "imports": [
+              "ASSISTANT_NAME",
+              "IDLE_TIMEOUT",
+              "MAIN_GROUP_FOLDER",
+              "SCHEDULER_POLL_INTERVAL",
+              "TIMEZONE"
+            ]
+          },
+          {
+            "file": "./container-runner.js",
+            "imports": [
+              "ContainerOutput",
+              "runContainerAgent",
+              "writeTasksSnapshot"
+            ]
+          },
+          {
+            "file": "./db.js",
+            "imports": [
+              "getAllTasks",
+              "getDueTasks",
+              "getTaskById",
+              "logTaskRun",
+              "updateTask",
+              "updateTaskAfterRun"
+            ]
+          },
+          {
+            "file": "./group-queue.js",
+            "imports": [
+              "GroupQueue"
+            ]
+          },
+          {
+            "file": "./group-folder.js",
+            "imports": [
+              "resolveGroupFolderPath"
+            ]
+          },
+          {
+            "file": "./logger.js",
+            "imports": [
+              "logger"
+            ]
+          },
+          {
+            "file": "./types.js",
+            "imports": [
+              "RegisteredGroup",
+              "ScheduledTask"
+            ]
+          }
+        ],
+        "exports": [
+          "startSchedulerLoop",
+          "_resetSchedulerLoopForTests"
+        ],
+        "interfaces": [
+          "SchedulerDependencies"
+        ],
+        "functions": [
+          "startSchedulerLoop",
+          "_resetSchedulerLoopForTests"
+        ]
+      },
+      "src/types.ts": {
+        "description": "Mount Allowlist - Security configuration for additional mounts",
+        "externalDependencies": [],
+        "nodeDependencies": [],
+        "internalDependencies": [],
+        "exports": [],
+        "interfaces": [
+          "AdditionalMount",
+          "MountAllowlist",
+          "AllowedRoot",
+          "ContainerConfig",
+          "RegisteredGroup",
+          "NewMessage",
+          "ScheduledTask",
+          "TaskRunLog",
+          "Channel"
+        ]
+      },
+      "src/whatsapp-auth.ts": {
+        "description": "WhatsApp Authentication Script",
+        "externalDependencies": [
+          {
+            "package": "pino",
+            "imports": [
+              "pino"
+            ]
+          },
+          {
+            "package": "qrcode-terminal",
+            "imports": [
+              "qrcode"
+            ]
+          },
+          {
+            "package": "@whiskeysockets/baileys",
+            "imports": [
+              "Browsers",
+              "DisconnectReason",
+              "makeCacheableSignalKeyStore",
+              "useMultiFileAuthState",
+              "makeWASocket"
+            ]
+          }
+        ],
+        "nodeDependencies": [
+          {
+            "module": "fs",
+            "imports": [
+              "fs"
+            ]
+          },
+          {
+            "module": "path",
+            "imports": [
+              "path"
+            ]
+          },
+          {
+            "module": "readline",
+            "imports": [
+              "readline"
+            ]
+          }
+        ],
+        "internalDependencies": [],
+        "exports": []
+      }
+    },
+    "entry": {
+      "src/index.ts": {
+        "description": "Get available groups list for the agent.",
+        "externalDependencies": [],
+        "nodeDependencies": [
+          {
+            "module": "fs",
+            "imports": [
+              "fs"
+            ]
+          },
+          {
+            "module": "path",
+            "imports": [
+              "path"
+            ]
+          }
+        ],
+        "internalDependencies": [
+          {
+            "file": "./config.js",
+            "imports": [
+              "ASSISTANT_NAME",
+              "IDLE_TIMEOUT",
+              "MAIN_GROUP_FOLDER",
+              "POLL_INTERVAL",
+              "TRIGGER_PATTERN"
+            ]
+          },
+          {
+            "file": "./channels/whatsapp.js",
+            "imports": [
+              "WhatsAppChannel"
+            ]
+          },
+          {
+            "file": "./container-runner.js",
+            "imports": [
+              "ContainerOutput",
+              "runContainerAgent",
+              "writeGroupsSnapshot",
+              "writeTasksSnapshot"
+            ]
+          },
+          {
+            "file": "./container-runtime.js",
+            "imports": [
+              "cleanupOrphans",
+              "ensureContainerRuntimeRunning"
+            ]
+          },
+          {
+            "file": "./db.js",
+            "imports": [
+              "getAllChats",
+              "getAllRegisteredGroups",
+              "getAllSessions",
+              "getAllTasks",
+              "getMessagesSince",
+              "getNewMessages",
+              "getRouterState",
+              "initDatabase",
+              "setRegisteredGroup",
+              "setRouterState",
+              "setSession",
+              "storeChatMetadata",
+              "storeMessage"
+            ]
+          },
+          {
+            "file": "./group-queue.js",
+            "imports": [
+              "GroupQueue"
+            ]
+          },
+          {
+            "file": "./group-folder.js",
+            "imports": [
+              "resolveGroupFolderPath"
+            ]
+          },
+          {
+            "file": "./ipc.js",
+            "imports": [
+              "startIpcWatcher"
+            ]
+          },
+          {
+            "file": "./router.js",
+            "imports": [
+              "findChannel",
+              "formatMessages",
+              "formatOutbound"
+            ]
+          },
+          {
+            "file": "./task-scheduler.js",
+            "imports": [
+              "startSchedulerLoop"
+            ]
+          },
+          {
+            "file": "./types.js",
+            "imports": [
+              "Channel",
+              "NewMessage",
+              "RegisteredGroup"
+            ]
+          },
+          {
+            "file": "./logger.js",
+            "imports": [
+              "logger"
+            ]
+          }
+        ],
+        "exports": [
+          "getAvailableGroups",
+          "_setRegisteredGroups"
+        ],
+        "functions": [
+          "getAvailableGroups",
+          "_setRegisteredGroups"
+        ]
+      }
+    }
+  },
+  "dependencyGraph": {
+    "circularDependencies": {
+      "runtime": [],
+      "typeOnly": [],
+      "total": 0,
+      "runtimeCount": 0,
+      "typeOnlyCount": 0
+    },
+    "layers": [
+      {
+        "name": "Channels",
+        "files": [
+          "src/channels/whatsapp.ts"
+        ]
+      },
+      {
+        "name": "Root",
+        "files": [
+          "src/config.ts",
+          "src/container-runner.ts",
+          "src/container-runtime.ts",
+          "src/db.ts",
+          "src/env.ts",
+          "src/fs-sync.ts",
+          "src/group-folder.ts",
+          "src/group-queue.ts",
+          "src/ipc.ts",
+          "src/logger.ts",
+          "src/mount-security.ts",
+          "src/router.ts",
+          "src/task-scheduler.ts",
+          "src/types.ts",
+          "src/whatsapp-auth.ts"
+        ]
+      },
+      {
+        "name": "Entry",
+        "files": [
+          "src/index.ts"
+        ]
+      }
+    ]
+  },
+  "statistics": {
+    "totalTypeScriptFiles": 17,
+    "totalModules": 3,
+    "totalLinesOfCode": 4614,
+    "totalExports": 85,
+    "totalClasses": 2,
+    "totalInterfaces": 18,
+    "totalFunctions": 63,
+    "totalTypeGuards": 2,
+    "totalEnums": 0,
+    "totalConstants": 20,
+    "totalReExports": 0,
+    "totalTypeOnlyImports": 0,
+    "runtimeCircularDeps": 0,
+    "typeOnlyCircularDeps": 0,
+    "unusedFilesCount": 1,
+    "unusedExportsCount": 29
+  }
+}

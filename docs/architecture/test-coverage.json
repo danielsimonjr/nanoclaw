@@ -1,0 +1,174 @@
+{
+  "metadata": {
+    "generatedAt": "2026-05-31T11:38:16.338Z",
+    "totalSourceFiles": 17,
+    "totalTestFiles": 18,
+    "testedCount": 16,
+    "untestedCount": 1,
+    "coveragePercent": "94.1"
+  },
+  "untestedFiles": [
+    "src/whatsapp-auth.ts"
+  ],
+  "testedFiles": [
+    "src/channels/whatsapp.ts",
+    "src/config.ts",
+    "src/container-runner.ts",
+    "src/container-runtime.ts",
+    "src/db.ts",
+    "src/env.ts",
+    "src/fs-sync.ts",
+    "src/group-folder.ts",
+    "src/group-queue.ts",
+    "src/index.ts",
+    "src/ipc.ts",
+    "src/logger.ts",
+    "src/mount-security.ts",
+    "src/router.ts",
+    "src/task-scheduler.ts",
+    "src/types.ts"
+  ],
+  "coverageMap": {
+    "src/channels/whatsapp.ts": [
+      "src/channels/whatsapp.test.ts"
+    ],
+    "src/config.ts": [
+      "src/formatting.test.ts"
+    ],
+    "src/container-runner.ts": [
+      "src/container-runner-host.test.ts",
+      "src/container-runner.test.ts"
+    ],
+    "src/container-runtime.ts": [
+      "src/container-runtime.test.ts"
+    ],
+    "src/db.ts": [
+      "src/channels/whatsapp.test.ts",
+      "src/db-accessors.test.ts",
+      "src/db.test.ts",
+      "src/ipc-auth.test.ts",
+      "src/ipc-watcher.test.ts",
+      "src/routing.test.ts",
+      "src/task-scheduler-run.test.ts",
+      "src/task-scheduler.test.ts"
+    ],
+    "src/env.ts": [
+      "src/env.test.ts"
+    ],
+    "src/fs-sync.ts": [
+      "src/fs-sync.test.ts"
+    ],
+    "src/group-folder.ts": [
+      "src/group-folder.test.ts"
+    ],
+    "src/group-queue.ts": [
+      "src/group-queue.test.ts"
+    ],
+    "src/index.ts": [
+      "src/routing.test.ts"
+    ],
+    "src/ipc.ts": [
+      "src/ipc-auth.test.ts",
+      "src/ipc-watcher.test.ts"
+    ],
+    "src/logger.ts": [
+      "src/container-runtime.test.ts"
+    ],
+    "src/mount-security.ts": [
+      "src/mount-security.test.ts"
+    ],
+    "src/router.ts": [
+      "src/formatting.test.ts",
+      "src/router-routing.test.ts"
+    ],
+    "src/task-scheduler.ts": [
+      "src/task-scheduler-run.test.ts",
+      "src/task-scheduler.test.ts"
+    ],
+    "src/types.ts": [
+      "src/container-runner-host.test.ts",
+      "src/container-runner.test.ts",
+      "src/db-accessors.test.ts",
+      "src/formatting.test.ts",
+      "src/ipc-auth.test.ts",
+      "src/ipc-watcher.test.ts",
+      "src/mount-security.test.ts",
+      "src/router-routing.test.ts",
+      "src/task-scheduler-run.test.ts"
+    ],
+    "src/whatsapp-auth.ts": []
+  },
+  "testToSourceMap": {
+    "src/channels/whatsapp.test.ts": [
+      "src/channels/whatsapp.ts",
+      "src/db.ts"
+    ],
+    "src/container-runner-host.test.ts": [
+      "src/container-runner.ts",
+      "src/types.ts"
+    ],
+    "src/container-runner.test.ts": [
+      "src/container-runner.ts",
+      "src/types.ts"
+    ],
+    "src/container-runtime.test.ts": [
+      "src/container-runtime.ts",
+      "src/logger.ts"
+    ],
+    "src/db-accessors.test.ts": [
+      "src/db.ts",
+      "src/types.ts"
+    ],
+    "src/db.test.ts": [
+      "src/db.ts"
+    ],
+    "src/env.test.ts": [
+      "src/env.ts"
+    ],
+    "src/formatting.test.ts": [
+      "src/config.ts",
+      "src/router.ts",
+      "src/types.ts"
+    ],
+    "src/fs-sync.test.ts": [
+      "src/fs-sync.ts"
+    ],
+    "src/group-folder.test.ts": [
+      "src/group-folder.ts"
+    ],
+    "src/group-queue.test.ts": [
+      "src/group-queue.ts"
+    ],
+    "src/ipc-auth.test.ts": [
+      "src/db.ts",
+      "src/ipc.ts",
+      "src/types.ts"
+    ],
+    "src/ipc-watcher.test.ts": [
+      "src/db.ts",
+      "src/ipc.ts",
+      "src/types.ts"
+    ],
+    "src/mount-security.test.ts": [
+      "src/mount-security.ts",
+      "src/types.ts"
+    ],
+    "src/router-routing.test.ts": [
+      "src/router.ts",
+      "src/types.ts"
+    ],
+    "src/routing.test.ts": [
+      "src/db.ts",
+      "src/index.ts"
+    ],
+    "src/task-scheduler-run.test.ts": [
+      "src/db.ts",
+      "src/types.ts",
+      "src/task-scheduler.ts"
+    ],
+    "src/task-scheduler.test.ts": [
+      "src/db.ts",
+      "src/task-scheduler.ts"
+    ]
+  }
+}
