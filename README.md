@@ -55,7 +55,7 @@ Then run `/setup`. Claude Code handles everything: dependencies, authentication,
 - **Scheduled tasks** - Recurring jobs that run Claude and can message you back
 - **Web access** - Search and fetch content
 - **Container isolation** - Agents sandboxed in Apple Container (macOS) or Docker/Podman (macOS/Linux/Windows)
-- **Cross-platform** - Runs on macOS, Linux, and natively on Windows 10/11 (orchestrator runs natively; agents run in Linux containers via Docker Desktop's WSL2 backend)
+- **Cross-platform** - Runs on macOS, Linux, and natively on Windows 10/11. Agents run in Linux containers (via Docker Desktop's WSL2 backend on Windows), or directly on the host with no container at all via `CONTAINER_RUNTIME=host`
 - **Agent Swarms** - Spin up teams of specialized agents that collaborate on complex tasks (first personal AI assistant to support this)
 - **Optional integrations** - Add Gmail (`/add-gmail`) and more via skills
 
@@ -136,18 +136,21 @@ Docker is **optional**. The container runtime is chosen with the
 | `docker` / `podman` / `container` | Use that runtime explicitly |
 | `host`              | Run the agent directly on the host — **no container, no filesystem isolation** |
 
-`host` mode requires the agent-runner to be built once
-(`cd container/agent-runner && npm install && npm run build`) and trades the
-container sandbox away: the additional-mount allowlist no longer applies, the
-agent can access the host filesystem, and it inherits the orchestrator's
-environment variables. Use it only where you accept that.
+`host` mode requires the agent-runner to be built once — run
+`npm run build:agent` from the project root — and trades the container sandbox
+away: the additional-mount allowlist no longer applies, the agent can access the
+host filesystem, and it inherits the orchestrator's environment variables. Use
+it only where you accept that. This is the way to run on Windows without Docker:
+set `CONTAINER_RUNTIME=host`, build the agent-runner, and the agent runs as a
+native Windows process — no WSL2 or Docker Desktop required.
 
-On Windows 10/11, the orchestrator runs as a native Node.js process while agents
-run in Linux containers via Docker Desktop's WSL2 backend — enable file sharing
-for the drive holding the project. (The orchestrator and setup are keyed purely
-on the `win32` platform, so Windows 10 and 11 behave identically; Windows 10
-just needs build 19041+ for the WSL2 backend, or use `CONTAINER_RUNTIME=host` to
-run without a container.) Setup registers a logon Scheduled Task
+On Windows 10/11, the orchestrator runs as a native Node.js process. By default
+agents run in Linux containers via Docker Desktop's WSL2 backend — enable file
+sharing for the drive holding the project — but with `CONTAINER_RUNTIME=host`
+the agents also run natively on Windows with no container at all. (The
+orchestrator and setup are keyed purely on the `win32` platform, so Windows 10
+and 11 behave identically; the Docker path on Windows 10 just needs build
+19041+.) Setup registers a logon Scheduled Task
 (`schtasks`) instead of launchd/systemd. `better-sqlite3` ships prebuilt
 binaries for Windows x64, so `npm install` works out of the box; on
 unusual setups without a prebuild (e.g. arm64) install the
@@ -214,7 +217,7 @@ Docker is the default because it's cross-platform and mature, but it's optional.
 
 **Can I run without a container runtime?**
 
-Yes — set `CONTAINER_RUNTIME=host`. The agent then runs as a normal host process with the workspace directories passed via env vars. This removes the sandbox: agents get host filesystem access and the additional-mount allowlist no longer applies, so only enable it in environments where that's acceptable. Build the agent-runner first with `cd container/agent-runner && npm install && npm run build`.
+Yes — set `CONTAINER_RUNTIME=host` (works on macOS, Linux, and natively on Windows 10/11 with no Docker or WSL2). The agent then runs as a normal host process with the workspace directories passed via env vars. This removes the sandbox: agents get host filesystem access and the additional-mount allowlist no longer applies, so only enable it in environments where that's acceptable. Build the agent-runner first with `npm run build:agent`.
 
 **Can I run this on Linux?**
 
