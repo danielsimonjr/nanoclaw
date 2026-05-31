@@ -10,6 +10,7 @@ import Database from 'better-sqlite3';
 
 import { STORE_DIR } from '../src/config.js';
 import { logger } from '../src/logger.js';
+import { runNodeScript } from './node-script.js';
 import { emitStatus } from './status.js';
 
 function parseArgs(args: string[]): { list: boolean; limit: number } {
@@ -158,15 +159,10 @@ sock.ev.on('connection.update', async (update) => {
 });
 `;
 
-    const output = execSync(
-      `node --input-type=module -e ${JSON.stringify(syncScript)}`,
-      {
-        cwd: projectRoot,
-        encoding: 'utf-8',
-        timeout: 45000,
-        stdio: ['ignore', 'pipe', 'pipe'],
-      },
-    );
+    const output = runNodeScript(syncScript, {
+      cwd: projectRoot,
+      timeout: 45000,
+    });
     syncOk = output.includes('SYNCED:');
     logger.info({ output: output.trim() }, 'Sync output');
   } catch (err) {
