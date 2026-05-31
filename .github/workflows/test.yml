@@ -6,13 +6,23 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    name: test (${{ matrix.os }}, node ${{ matrix.node }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # Cover the supported platforms (Linux + Windows 10/11) and the Node
+        # floor (20) plus the documented target (22).
+        os: [ubuntu-latest, windows-latest]
+        node: [20, 22]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: ${{ matrix.node }}
           cache: npm
       - run: npm ci
-      - run: npx tsc --noEmit
-      - run: npx vitest run
+      - run: npm run typecheck
+      # Core suite (src/ + setup/). The skills-engine tests are POSIX/git-heavy
+      # and run separately on Linux in skill-tests.yml.
+      - run: npx vitest run src/ setup/

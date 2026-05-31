@@ -185,7 +185,8 @@ For development:
 ```bash
 npm run dev          # Run with hot reload
 npm run build        # Compile TypeScript
-./container/build.sh # Rebuild the agent container image
+./container/build.sh # Rebuild the agent container image (macOS/Linux/WSL)
+container\build.cmd  # Rebuild the agent container image (native Windows)
 ```
 
 To run the agent without a container (`host` mode), build the agent-runner once:

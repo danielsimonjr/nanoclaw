@@ -37,7 +37,8 @@ Run commands directly—don't tell the user to run them.
 ```bash
 npm run dev          # Run with hot reload
 npm run build        # Compile TypeScript
-./container/build.sh # Rebuild agent container
+./container/build.sh # Rebuild agent container (macOS/Linux/WSL)
+container\build.cmd  # Rebuild agent container (native Windows)
 ```
 
 Container runtime is selected via `CONTAINER_RUNTIME` (`auto` default, or `docker`/`podman`/`container`/`host`). `host` runs the agent without a sandbox and requires `container/agent-runner` to be built (`npm install && npm run build` there). Runtime abstraction lives in `src/container-runtime.ts`.
@@ -63,4 +64,4 @@ schtasks /Query /TN NanoClaw    # status
 
 ## Container Build Cache
 
-The container buildkit caches the build context aggressively. `--no-cache` alone does NOT invalidate COPY steps — the builder's volume retains stale files. To force a truly clean rebuild, prune the builder then re-run `./container/build.sh`.
+The container buildkit caches the build context aggressively. `--no-cache` alone does NOT invalidate COPY steps — the builder's volume retains stale files. To force a truly clean rebuild, prune the builder then re-run `./container/build.sh` (or `container\build.cmd` on native Windows).
