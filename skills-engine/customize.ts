@@ -95,9 +95,27 @@ export function commitCustomize(): void {
     const basePath = path.join(baseDir, relativePath);
     const currentPath = path.join(cwd, relativePath);
 
+    const baseExists = fs.existsSync(basePath);
+    const currentExists = fs.existsSync(currentPath);
+
+    // A tracked path that exists but is not a regular file (e.g. a directory)
+    // can't be diffed. Surface it as a descriptive error here rather than
+    // relying on the `diff` binary's exit code, which is platform-specific
+    // (POSIX diff exits 2, but the git-bash diff on Windows does not).
+    if (baseExists && !fs.statSync(basePath).isFile()) {
+      throw new Error(
+        `diff error for ${relativePath}: base path is not a regular file (${basePath})`,
+      );
+    }
+    if (currentExists && !fs.statSync(currentPath).isFile()) {
+      throw new Error(
+        `diff error for ${relativePath}: path is not a regular file (${currentPath})`,
+      );
+    }
+
     // Use /dev/null if either side doesn't exist
-    const oldPath = fs.existsSync(basePath) ? basePath : '/dev/null';
-    const newPath = fs.existsSync(currentPath) ? currentPath : '/dev/null';
+    const oldPath = baseExists ? basePath : '/dev/null';
+    const newPath = currentExists ? currentPath : '/dev/null';
 
     try {
       const diff = execFileSync('diff', ['-ruN', oldPath, newPath], {
