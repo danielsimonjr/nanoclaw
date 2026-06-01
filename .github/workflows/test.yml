@@ -23,6 +23,9 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run typecheck
+      # Prettier was a defined-but-unwired script; enforce it so style/EOL drift
+      # can't return. Passes on a fresh checkout (.gitattributes pins eol=lf).
+      - run: npm run format:check
       # Core suite (src/ + setup/). The skills-engine tests are git-heavy and
       # run as a separate Linux-only job below (the `engine` job).
       - run: npx vitest run src/ setup/
