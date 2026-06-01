@@ -108,6 +108,36 @@ describe('replay', () => {
       expect(config).toContain('telegram config');
     });
 
+    it('reports a missing modify source as a package error, not a conflict', async () => {
+      const baseDir = path.join(tmpDir, '.nanoclaw', 'base', 'src');
+      fs.mkdirSync(baseDir, { recursive: true });
+      fs.writeFileSync(path.join(baseDir, 'config.ts'), 'base content\n');
+      fs.mkdirSync(path.join(tmpDir, 'src'), { recursive: true });
+      fs.writeFileSync(path.join(tmpDir, 'src', 'config.ts'), 'base content\n');
+
+      // Declares modifies but ships no modify/ source for it (broken package).
+      const skillDir = createSkillPackage(tmpDir, {
+        skill: 'broken',
+        version: '1.0.0',
+        core_version: '1.0.0',
+        modifies: ['src/config.ts'],
+      });
+
+      const result = await replaySkills({
+        skills: ['broken'],
+        skillDirs: { broken: skillDir },
+        projectRoot: tmpDir,
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.perSkill.broken.success).toBe(false);
+      expect(result.perSkill.broken.error).toMatch(
+        /missing its modify source/i,
+      );
+      // Not misreported as a merge conflict.
+      expect(result.mergeConflicts ?? []).not.toContain('src/config.ts');
+    });
+
     it('replays two skills in order', async () => {
       // Set up base
       const baseDir = path.join(tmpDir, '.nanoclaw', 'base', 'src');

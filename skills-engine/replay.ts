@@ -168,6 +168,7 @@ export async function replaySkills(
 
       // Three-way merge modify/ files
       const skillConflicts: string[] = [];
+      let missingSource: string | null = null;
 
       for (const relPath of manifest.modifies) {
         const resolvedPath = resolvePathRemap(relPath, pathRemap);
@@ -176,8 +177,11 @@ export async function replaySkills(
         const skillPath = path.join(skillDir, 'modify', relPath);
 
         if (!fs.existsSync(skillPath)) {
-          skillConflicts.push(relPath);
-          continue;
+          // A missing modify source is a broken skill package, not a merge
+          // conflict — there are no conflict markers to resolve. Report it
+          // distinctly so the user fixes the package.
+          missingSource = relPath;
+          break;
         }
 
         if (!fs.existsSync(currentPath)) {
@@ -233,7 +237,17 @@ export async function replaySkills(
         }
       }
 
-      if (skillConflicts.length > 0) {
+      if (missingSource) {
+        // Stop replay — the package is broken, not conflicted. Fail overall
+        // (mirrors the catch below) rather than falling through to success.
+        const error = `Skill package is missing its modify source: ${missingSource}`;
+        perSkill[skillName] = { success: false, error };
+        return {
+          success: false,
+          perSkill,
+          error: `Replay failed for ${skillName}: ${error}`,
+        };
+      } else if (skillConflicts.length > 0) {
         allMergeConflicts.push(...skillConflicts);
         perSkill[skillName] = {
           success: false,
