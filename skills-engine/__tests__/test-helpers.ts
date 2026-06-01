@@ -137,6 +137,9 @@ export function initGitRepo(dir: string): void {
   // which would otherwise make these throwaway commits fail.
   execSync('git config commit.gpgsign false', { cwd: dir, stdio: 'pipe' });
   execSync('git config tag.gpgsign false', { cwd: dir, stdio: 'pipe' });
+  // Pin LF so patch round-trips are deterministic regardless of the host's
+  // global core.autocrlf (true on many Windows installs).
+  execSync('git config core.autocrlf false', { cwd: dir, stdio: 'pipe' });
   fs.writeFileSync(path.join(dir, '.gitignore'), 'node_modules\n');
   execSync('git add -A && git commit -m "init"', { cwd: dir, stdio: 'pipe' });
 }

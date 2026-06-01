@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { execFileSync, execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import {
@@ -13,6 +14,7 @@ import {
   setupNanoclawDir,
   createMinimalState,
   cleanup,
+  initGitRepo,
   writeState,
 } from './test-helpers.js';
 import {
@@ -104,6 +106,43 @@ describe('customize', () => {
     expect(state.custom_modifications).toBeDefined();
     expect(state.custom_modifications!.length).toBeGreaterThan(0);
     expect(state.custom_modifications![0].description).toBe('add feature');
+  });
+
+  it('records a git-format patch that re-applies via git apply --3way', () => {
+    // Mirrors how applyUpdate() re-applies custom patches after an update.
+    initGitRepo(tmpDir);
+    const baseContent = 'export const x = 1;\n';
+    const baseFile = path.join(tmpDir, '.nanoclaw', 'base', 'src', 'app.ts');
+    fs.mkdirSync(path.dirname(baseFile), { recursive: true });
+    fs.writeFileSync(baseFile, baseContent);
+    const trackedFile = path.join(tmpDir, 'src', 'app.ts');
+    fs.mkdirSync(path.dirname(trackedFile), { recursive: true });
+    fs.writeFileSync(trackedFile, baseContent);
+    // Commit so the base blob exists for the 3-way apply.
+    execSync('git add -A && git commit -m base', {
+      cwd: tmpDir,
+      stdio: 'pipe',
+    });
+    recordSkillApplication('test-skill', '1.0.0', {
+      'src/app.ts': computeFileHash(trackedFile),
+    });
+
+    startCustomize('change app');
+    const customized = 'export const x = 2;\nexport const y = 3;\n';
+    fs.writeFileSync(trackedFile, customized);
+    commitCustomize();
+
+    const mod = readState().custom_modifications!.at(-1)!;
+    const patch = fs.readFileSync(path.join(tmpDir, mod.patch_file), 'utf-8');
+    expect(patch).toContain('diff --git');
+
+    // Reset the working file to base, then re-apply the recorded patch.
+    fs.writeFileSync(trackedFile, baseContent);
+    execFileSync('git', ['apply', '--3way', mod.patch_file], {
+      cwd: tmpDir,
+      stdio: 'pipe',
+    });
+    expect(fs.readFileSync(trackedFile, 'utf-8')).toBe(customized);
   });
 
   it('commitCustomize throws descriptive error on diff failure', () => {

@@ -1,10 +1,10 @@
-import { execFileSync, execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 
 import { parse, stringify } from 'yaml';
 
 import { BASE_DIR, CUSTOM_DIR } from './constants.js';
+import { gitDiffNoIndex } from './git-utils.js';
 import {
   computeFileHash,
   readState,
@@ -87,7 +87,8 @@ export function commitCustomize(): void {
     return;
   }
 
-  // Generate unified diff for each changed file
+  // Generate a unified diff for each changed file via `git diff --no-index`
+  // (see git-utils.ts for why git rather than the POSIX `diff` binary).
   const baseDir = path.join(cwd, BASE_DIR);
   let combinedPatch = '';
 
@@ -99,9 +100,7 @@ export function commitCustomize(): void {
     const currentExists = fs.existsSync(currentPath);
 
     // A tracked path that exists but is not a regular file (e.g. a directory)
-    // can't be diffed. Surface it as a descriptive error here rather than
-    // relying on the `diff` binary's exit code, which is platform-specific
-    // (POSIX diff exits 2, but the git-bash diff on Windows does not).
+    // can't be diffed; surface it as a descriptive error.
     if (baseExists && !fs.statSync(basePath).isFile()) {
       throw new Error(
         `diff error for ${relativePath}: base path is not a regular file (${basePath})`,
@@ -113,27 +112,17 @@ export function commitCustomize(): void {
       );
     }
 
-    // Use /dev/null if either side doesn't exist
-    const oldPath = baseExists ? basePath : '/dev/null';
-    const newPath = currentExists ? currentPath : '/dev/null';
+    // Pass paths relative to the project root (relativePath is already POSIX);
+    // /dev/null marks an added or removed side.
+    const oldArg = baseExists ? `${BASE_DIR}/${relativePath}` : '/dev/null';
+    const newArg = currentExists ? relativePath : '/dev/null';
 
     try {
-      const diff = execFileSync('diff', ['-ruN', oldPath, newPath], {
-        encoding: 'utf-8',
-      });
-      combinedPatch += diff;
-    } catch (err: unknown) {
-      const execErr = err as { status?: number; stdout?: string };
-      if (execErr.status === 1 && execErr.stdout) {
-        // diff exits 1 when files differ — that's expected
-        combinedPatch += execErr.stdout;
-      } else if (execErr.status === 2) {
-        throw new Error(
-          `diff error for ${relativePath}: diff exited with status 2 (check file permissions or encoding)`,
-        );
-      } else {
-        throw err;
-      }
+      combinedPatch += gitDiffNoIndex([oldArg, newArg], cwd);
+    } catch (err) {
+      throw new Error(
+        `diff error for ${relativePath}: ${err instanceof Error ? err.message : String(err)}`,
+      );
     }
   }
 
