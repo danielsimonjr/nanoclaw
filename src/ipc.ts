@@ -15,6 +15,33 @@ import { isValidGroupFolder } from './group-folder.js';
 import { logger } from './logger.js';
 import { RegisteredGroup } from './types.js';
 
+/**
+ * Move a failed IPC file into the errors/ quarantine directory without ever
+ * throwing. A plain renameSync throws on Windows when the destination already
+ * exists (unlike POSIX), which would abort the drain of the remaining files in
+ * that directory for the whole tick. Overwrite a colliding quarantine file, and
+ * if even that fails, delete the poison file so it can't stall the drain.
+ */
+function quarantineIpcFile(
+  filePath: string,
+  errorDir: string,
+  name: string,
+): void {
+  try {
+    fs.mkdirSync(errorDir, { recursive: true });
+    const dest = path.join(errorDir, name);
+    fs.rmSync(dest, { force: true });
+    fs.renameSync(filePath, dest);
+  } catch (err) {
+    logger.error({ filePath, err }, 'Failed to quarantine IPC file; deleting');
+    try {
+      fs.rmSync(filePath, { force: true });
+    } catch {
+      // Nothing more we can do; leave it for the next tick.
+    }
+  }
+}
+
 export interface IpcDeps {
   sendMessage: (jid: string, text: string) => Promise<void>;
   registeredGroups: () => Record<string, RegisteredGroup>;
@@ -102,11 +129,10 @@ export function startIpcWatcher(deps: IpcDeps): void {
                 { file, sourceGroup, err },
                 'Error processing IPC message',
               );
-              const errorDir = path.join(ipcBaseDir, 'errors');
-              fs.mkdirSync(errorDir, { recursive: true });
-              fs.renameSync(
+              quarantineIpcFile(
                 filePath,
-                path.join(errorDir, `${sourceGroup}-${file}`),
+                path.join(ipcBaseDir, 'errors'),
+                `${sourceGroup}-${file}`,
               );
             }
           }
@@ -136,11 +162,10 @@ export function startIpcWatcher(deps: IpcDeps): void {
                 { file, sourceGroup, err },
                 'Error processing IPC task',
               );
-              const errorDir = path.join(ipcBaseDir, 'errors');
-              fs.mkdirSync(errorDir, { recursive: true });
-              fs.renameSync(
+              quarantineIpcFile(
                 filePath,
-                path.join(errorDir, `${sourceGroup}-${file}`),
+                path.join(ipcBaseDir, 'errors'),
+                `${sourceGroup}-${file}`,
               );
             }
           }

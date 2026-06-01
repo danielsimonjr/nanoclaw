@@ -366,6 +366,20 @@ function driveAgentProcess(cfg: AgentProcessConfig): Promise<ContainerOutput> {
           );
         }
       }
+
+      // Bound parseBuffer. Container stdout is untrusted: marker-less spew (no
+      // START at all) or a START whose END never arrives would otherwise grow
+      // this buffer without limit and OOM the orchestrator before the timeout
+      // fires. A valid marker payload is far smaller than the cap, so once we
+      // exceed it, keep only a short tail (a marker cannot span more than its
+      // own length) and drop the rest.
+      if (parseBuffer.length > CONTAINER_MAX_OUTPUT_SIZE) {
+        parseBuffer = parseBuffer.slice(-(OUTPUT_START_MARKER.length - 1));
+        logger.warn(
+          { group: group.name, max: CONTAINER_MAX_OUTPUT_SIZE },
+          'Agent parse buffer exceeded limit; discarding to protect the host',
+        );
+      }
     });
 
     proc.stderr?.on('data', (data) => {
