@@ -1,15 +1,13 @@
-import { execFileSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { cleanup, createTempDir } from './test-helpers.js';
+import { cleanup, createTempDir, runTsxScript } from './test-helpers.js';
 
 describe('run-migrations', () => {
   let tmpDir: string;
   let newCoreDir: string;
   const scriptPath = path.resolve('scripts/run-migrations.ts');
-  const tsxBin = path.resolve('node_modules/.bin/tsx');
 
   beforeEach(() => {
     tmpDir = createTempDir();
@@ -32,11 +30,8 @@ describe('run-migrations', () => {
     to: string,
   ): { stdout: string; exitCode: number } {
     try {
-      const stdout = execFileSync(tsxBin, [scriptPath, from, to, newCoreDir], {
+      const stdout = runTsxScript([scriptPath, from, to, newCoreDir], {
         cwd: tmpDir,
-        encoding: 'utf-8',
-        stdio: 'pipe',
-        timeout: 30_000,
       });
       return { stdout, exitCode: 0 };
     } catch (err: any) {

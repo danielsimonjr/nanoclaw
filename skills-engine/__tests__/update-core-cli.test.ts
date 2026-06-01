@@ -1,4 +1,3 @@
-import { execFileSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -8,13 +7,13 @@ import {
   cleanup,
   createTempDir,
   initGitRepo,
+  runTsxScript,
   setupNanoclawDir,
 } from './test-helpers.js';
 
 describe('update-core.ts CLI flags', () => {
   let tmpDir: string;
   const scriptPath = path.resolve('scripts/update-core.ts');
-  const tsxBin = path.resolve('node_modules/.bin/tsx');
 
   beforeEach(() => {
     tmpDir = createTempDir();
@@ -61,10 +60,9 @@ describe('update-core.ts CLI flags', () => {
       'package.json': JSON.stringify({ version: '2.0.0' }),
     });
 
-    const stdout = execFileSync(
-      tsxBin,
+    const stdout = runTsxScript(
       [scriptPath, '--json', '--preview-only', newCoreDir],
-      { cwd: tmpDir, encoding: 'utf-8', stdio: 'pipe', timeout: 30_000 },
+      { cwd: tmpDir },
     );
 
     const preview = JSON.parse(stdout);
@@ -85,11 +83,9 @@ describe('update-core.ts CLI flags', () => {
       'package.json': JSON.stringify({ version: '2.0.0' }),
     });
 
-    const stdout = execFileSync(
-      tsxBin,
-      [scriptPath, '--preview-only', newCoreDir],
-      { cwd: tmpDir, encoding: 'utf-8', stdio: 'pipe', timeout: 30_000 },
-    );
+    const stdout = runTsxScript([scriptPath, '--preview-only', newCoreDir], {
+      cwd: tmpDir,
+    });
 
     expect(stdout).toContain('Update Preview');
     expect(stdout).toContain('2.0.0');
@@ -106,11 +102,8 @@ describe('update-core.ts CLI flags', () => {
       'package.json': JSON.stringify({ version: '2.0.0' }),
     });
 
-    const stdout = execFileSync(tsxBin, [scriptPath, '--json', newCoreDir], {
+    const stdout = runTsxScript([scriptPath, '--json', newCoreDir], {
       cwd: tmpDir,
-      encoding: 'utf-8',
-      stdio: 'pipe',
-      timeout: 30_000,
     });
 
     const result = JSON.parse(stdout);
@@ -122,12 +115,7 @@ describe('update-core.ts CLI flags', () => {
 
   it('exits with error when no path provided', () => {
     try {
-      execFileSync(tsxBin, [scriptPath], {
-        cwd: tmpDir,
-        encoding: 'utf-8',
-        stdio: 'pipe',
-        timeout: 30_000,
-      });
+      runTsxScript([scriptPath], { cwd: tmpDir });
       expect.unreachable('Should have exited with error');
     } catch (err: any) {
       expect(err.status).toBe(1);

@@ -1,33 +1,20 @@
 #!/usr/bin/env tsx
-import { execFileSync, execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import fs from 'fs';
+import { createRequire } from 'module';
 import path from 'path';
+import { pathToFileURL } from 'url';
 
 import { compareSemver } from '../skills-engine/state.js';
 
-// Resolve tsx binary once to avoid npx race conditions across migrations
-function resolveTsx(): string {
-  // Check local node_modules first. On Windows the launcher is tsx.cmd; on
-  // POSIX it's the extension-less `tsx` shim.
-  const isWindows = process.platform === 'win32';
-  const localCandidates = isWindows
-    ? ['node_modules/.bin/tsx.cmd', 'node_modules/.bin/tsx']
-    : ['node_modules/.bin/tsx'];
-  for (const candidate of localCandidates) {
-    const local = path.resolve(candidate);
-    if (fs.existsSync(local)) return local;
-  }
-  // Fall back to whichever tsx is in PATH (`where` on Windows, `command -v`
-  // on POSIX — `which` does not exist on native Windows).
-  try {
-    const probe = isWindows ? 'where tsx' : 'command -v tsx';
-    return execSync(probe, { encoding: 'utf-8' }).trim().split(/\r?\n/)[0];
-  } catch {
-    return 'npx'; // last resort
-  }
-}
-
-const tsxBin = resolveTsx();
+// Resolve tsx's ESM loader once so each migration runs under TypeScript on any
+// platform. Migrations are spawned as `node --import <loader> <migration>`
+// rather than via the node_modules/.bin/tsx launcher: on Windows that launcher
+// is a `.cmd`, which execFileSync refuses to run directly (EINVAL since the
+// CVE-2024-27980 fix), and the extension-less POSIX shim is unrunnable there.
+const tsxLoaderUrl = pathToFileURL(
+  createRequire(import.meta.url).resolve('tsx'),
+).href;
 
 const fromVersion = process.argv[2];
 const toVersion = process.argv[3];
@@ -81,14 +68,15 @@ for (const version of migrationVersions) {
   }
 
   try {
-    const tsxArgs = tsxBin.endsWith('npx')
-      ? ['tsx', migrationIndex, projectRoot]
-      : [migrationIndex, projectRoot];
-    execFileSync(tsxBin, tsxArgs, {
-      stdio: 'pipe',
-      cwd: projectRoot,
-      timeout: 120_000,
-    });
+    execFileSync(
+      process.execPath,
+      ['--import', tsxLoaderUrl, migrationIndex, projectRoot],
+      {
+        stdio: 'pipe',
+        cwd: projectRoot,
+        timeout: 120_000,
+      },
+    );
     results.push({ version, success: true });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

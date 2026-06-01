@@ -1,11 +1,45 @@
-import { execSync } from 'child_process';
+import { execFileSync, execSync } from 'child_process';
 import fs from 'fs';
+import { createRequire } from 'module';
 import os from 'os';
 import path from 'path';
+import { pathToFileURL } from 'url';
 import { stringify } from 'yaml';
 
 export function createTempDir(): string {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'nanoclaw-test-'));
+}
+
+// Absolute file URL of tsx's ESM loader, resolved once from this module's
+// location. Passed to `node --import` so the loader is found regardless of the
+// spawned process's cwd (test scripts run with cwd set to a throwaway temp dir
+// that has no node_modules).
+const tsxLoaderUrl = pathToFileURL(
+  createRequire(import.meta.url).resolve('tsx'),
+).href;
+
+/**
+ * Run a TypeScript CLI script through tsx and return its stdout.
+ *
+ * Spawns `node --import <tsx-loader> <args...>` rather than the
+ * `node_modules/.bin/tsx` launcher: on Windows that launcher is `tsx.cmd`, and
+ * `execFileSync` refuses to run `.cmd`/`.bat` files directly (EINVAL since the
+ * CVE-2024-27980 fix), while the extension-less `tsx` shim is an unrunnable
+ * POSIX script (ENOENT). Going through the node executable sidesteps both and
+ * behaves identically on every platform. On a non-zero exit this throws the
+ * standard execFileSync error (carrying `.status`, `.stdout`, and `.stderr`),
+ * so callers can assert on it.
+ */
+export function runTsxScript(
+  args: string[],
+  options: { cwd: string; timeout?: number },
+): string {
+  return execFileSync(process.execPath, ['--import', tsxLoaderUrl, ...args], {
+    cwd: options.cwd,
+    encoding: 'utf-8',
+    stdio: 'pipe',
+    timeout: options.timeout ?? 30_000,
+  });
 }
 
 export function setupNanoclawDir(tmpDir: string): void {
