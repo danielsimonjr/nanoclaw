@@ -414,5 +414,41 @@ describe('update', () => {
       expect(fs.existsSync(path.join(tmpDir, 'src/index.ts'))).toBe(true);
       expect(fs.existsSync(path.join(tmpDir, 'src/removed.ts'))).toBe(false);
     });
+
+    it('preserves an upstream-deleted file that an applied skill modifies', () => {
+      const baseDir = path.join(tmpDir, '.nanoclaw', 'base');
+      fs.mkdirSync(path.join(baseDir, 'src'), { recursive: true });
+      fs.writeFileSync(path.join(baseDir, 'src/index.ts'), 'keep');
+      fs.writeFileSync(path.join(baseDir, 'src/skilled.ts'), 'base');
+
+      fs.mkdirSync(path.join(tmpDir, 'src'), { recursive: true });
+      fs.writeFileSync(path.join(tmpDir, 'src/index.ts'), 'keep');
+      fs.writeFileSync(path.join(tmpDir, 'src/skilled.ts'), 'skill version');
+
+      // An applied skill tracks src/skilled.ts.
+      writeStateFile({
+        skills_system_version: '0.1.0',
+        core_version: '1.0.0',
+        applied_skills: [
+          {
+            name: 'demo',
+            version: '1.0.0',
+            applied_at: '2026-01-01T00:00:00.000Z',
+            file_hashes: { 'src/skilled.ts': 'abc' },
+          },
+        ],
+      });
+
+      // New core drops src/skilled.ts.
+      const newCoreDir = createNewCoreDir({ 'src/index.ts': 'keep' });
+
+      return import('../update.js').then(async ({ applyUpdate }) => {
+        const result = await applyUpdate(newCoreDir);
+        expect(result.success).toBe(true);
+        // Preserved (not silently deleted) and reported as a conflict.
+        expect(fs.existsSync(path.join(tmpDir, 'src/skilled.ts'))).toBe(true);
+        expect(result.deletionConflicts).toContain('src/skilled.ts');
+      });
+    });
   });
 });

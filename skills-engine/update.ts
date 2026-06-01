@@ -227,7 +227,23 @@ export async function applyUpdate(newCorePath: string): Promise<UpdateResult> {
     }
 
     // --- Remove deleted files ---
+    // A file removed upstream may still be modified by an applied skill or a
+    // custom modification. Deleting it would silently drop those changes, so
+    // preserve it and surface the conflict instead.
+    const skillTracked = new Set<string>();
+    for (const skill of state.applied_skills) {
+      for (const f of Object.keys(skill.file_hashes)) skillTracked.add(f);
+    }
+    for (const mod of state.custom_modifications ?? []) {
+      for (const f of mod.files_modified) skillTracked.add(f);
+    }
+
+    const deletionConflicts: string[] = [];
     for (const relPath of preview.filesDeleted) {
+      if (skillTracked.has(relPath)) {
+        deletionConflicts.push(relPath);
+        continue;
+      }
       const currentPath = path.join(projectRoot, relPath);
       if (fs.existsSync(currentPath)) {
         fs.unlinkSync(currentPath);
@@ -367,6 +383,8 @@ export async function applyUpdate(newCorePath: string): Promise<UpdateResult> {
         Object.keys(skillReapplyResults).length > 0
           ? skillReapplyResults
           : undefined,
+      deletionConflicts:
+        deletionConflicts.length > 0 ? deletionConflicts : undefined,
     };
   } catch (err) {
     restoreBackup();

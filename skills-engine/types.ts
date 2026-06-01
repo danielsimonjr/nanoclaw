@@ -112,6 +112,9 @@ export interface UpdateResult {
   backupPending?: boolean;
   customPatchFailures?: string[];
   skillReapplyResults?: Record<string, boolean>;
+  // Files removed upstream that an applied skill / custom mod still modifies;
+  // preserved (not deleted) so the skill's changes aren't silently lost.
+  deletionConflicts?: string[];
   error?: string;
 }
 
