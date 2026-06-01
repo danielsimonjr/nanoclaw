@@ -194,16 +194,48 @@ async function runTask(
   });
 
   let nextRun: string | null = null;
-  if (task.schedule_type === 'cron') {
-    const interval = CronExpressionParser.parse(task.schedule_value, {
-      tz: TIMEZONE,
-    });
-    nextRun = interval.next().toISOString();
-  } else if (task.schedule_type === 'interval') {
-    const ms = parseInt(task.schedule_value, 10);
-    nextRun = new Date(Date.now() + ms).toISOString();
+  try {
+    if (task.schedule_type === 'cron') {
+      const interval = CronExpressionParser.parse(task.schedule_value, {
+        tz: TIMEZONE,
+      });
+      nextRun = interval.next().toISOString();
+    } else if (task.schedule_type === 'interval') {
+      const ms = parseInt(task.schedule_value, 10);
+      const nextMs = Date.now() + ms;
+      // Guard NaN (non-numeric value) and overflow past the max valid Date —
+      // either would make new Date(...).toISOString() throw below.
+      if (
+        !Number.isFinite(ms) ||
+        !Number.isFinite(nextMs) ||
+        nextMs > 8.64e15
+      ) {
+        throw new RangeError(`interval out of range: "${task.schedule_value}"`);
+      }
+      nextRun = new Date(nextMs).toISOString();
+    }
+    // 'once' tasks have no recurring next run.
+  } catch (schedErr) {
+    // A corrupt/legacy schedule_value must not throw out of runTask, which
+    // would skip updateTaskAfterRun, leave next_run stale, and make the
+    // scheduler re-enqueue this task every poll forever. Pause it so the churn
+    // stops and the bad value is visible to the user.
+    const msg = schedErr instanceof Error ? schedErr.message : String(schedErr);
+    logger.error(
+      { taskId: task.id, scheduleValue: task.schedule_value, error: msg },
+      'Failed to compute next run; pausing task',
+    );
+    updateTask(task.id, { status: 'paused' });
+    return;
   }
-  // 'once' tasks have no next run
+
+  // A 'once' task that errored should not be silently marked completed (which
+  // loses it with no retry). Pause it so the failure is visible and it can be
+  // resumed. Recurring tasks keep their schedule on error (handled above).
+  if (task.schedule_type === 'once' && error) {
+    updateTask(task.id, { status: 'paused' });
+    return;
+  }
 
   const resultSummary = error
     ? `Error: ${error}`

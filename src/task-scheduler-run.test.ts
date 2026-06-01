@@ -176,6 +176,47 @@ describe('runTask (via scheduler loop)', () => {
     expect(t.next_run).toBeNull();
   });
 
+  it('pauses a task whose cron value is malformed instead of looping', async () => {
+    makeDueTask({ schedule_type: 'cron', schedule_value: 'not a cron' });
+    agent.impl = async () => ({ status: 'success', result: 'ok' });
+
+    startSchedulerLoop(deps);
+    await vi.waitFor(() => {
+      expect(getTaskById('task-run')!.status).toBe('paused');
+    });
+    // Paused, so it will not be re-enqueued every poll.
+    expect(getTaskById('task-run')!.status).toBe('paused');
+  });
+
+  it('pauses an interval task whose value overflows the Date range', async () => {
+    makeDueTask({
+      schedule_type: 'interval',
+      schedule_value: '99999999999999999999',
+    });
+    agent.impl = async () => ({ status: 'success', result: 'ok' });
+
+    startSchedulerLoop(deps);
+    await vi.waitFor(() => {
+      expect(getTaskById('task-run')!.status).toBe('paused');
+    });
+    expect(getTaskById('task-run')!.status).toBe('paused');
+  });
+
+  it('pauses (does not complete) a one-shot task that errors', async () => {
+    makeDueTask({
+      schedule_type: 'once',
+      schedule_value: '2026-01-01T00:00:00.000Z',
+    });
+    agent.impl = async () => ({ status: 'error', result: null, error: 'boom' });
+
+    startSchedulerLoop(deps);
+    await vi.waitFor(() => {
+      expect(getTaskById('task-run')!.status).toBe('paused');
+    });
+    // Not silently completed — preserved for the user to inspect/retry.
+    expect(getTaskById('task-run')!.status).toBe('paused');
+  });
+
   it('does not invoke the agent when the group is unregistered', async () => {
     makeDueTask({ group_folder: 'ghost' });
     const { runContainerAgent } = await import('./container-runner.js');
