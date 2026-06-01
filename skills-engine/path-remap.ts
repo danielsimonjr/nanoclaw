@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 
+import { toPosix } from './fs-utils.js';
 import { readState, writeState } from './state.js';
 
 function isWithinRoot(rootPath: string, targetPath: string): boolean {
@@ -65,7 +66,9 @@ function toSafeProjectRelativePath(
     );
   }
 
-  return path.relative(realRoot, realResolved);
+  // Project-relative paths are used as state keys and compared against
+  // POSIX-style manifest entries, so normalize away Windows backslashes.
+  return toPosix(path.relative(realRoot, realResolved));
 }
 
 function sanitizeRemapEntries(

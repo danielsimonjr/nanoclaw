@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 
 import { BASE_DIR, CUSTOM_DIR, NANOCLAW_DIR } from './constants.js';
+import { toPosix } from './fs-utils.js';
 import { initNanoclawDir } from './init.js';
 import { recordCustomModification } from './state.js';
 
@@ -46,7 +47,7 @@ export function migrateExisting(): void {
 
       // Extract modified file paths from the diff
       const filesModified = [...diff.matchAll(/^diff -ruN .+ (.+)$/gm)]
-        .map((m) => path.relative(projectRoot, m[1]))
+        .map((m) => toPosix(path.relative(projectRoot, m[1])))
         .filter((f) => !f.startsWith('.nanoclaw'));
 
       // Record in state so the patch is visible to the tracking system

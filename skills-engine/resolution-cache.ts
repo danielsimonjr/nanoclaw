@@ -8,6 +8,7 @@ import {
   RESOLUTIONS_DIR,
   SHIPPED_RESOLUTIONS_DIR,
 } from './constants.js';
+import { toPosix } from './fs-utils.js';
 import { computeFileHash } from './state.js';
 import { FileInputHashes, ResolutionMeta } from './types.js';
 
@@ -263,9 +264,10 @@ function findPreimagePairs(
     ) {
       const resolutionPath = fullPath.replace(/\.preimage$/, '.resolution');
       if (fs.existsSync(resolutionPath)) {
-        const relPath = path
-          .relative(baseDir, fullPath)
-          .replace(/\.preimage$/, '');
+        // relPath keys into meta.file_hashes (POSIX), so normalize separators.
+        const relPath = toPosix(
+          path.relative(baseDir, fullPath).replace(/\.preimage$/, ''),
+        );
         pairs.push({ relPath, preimage: fullPath, resolution: resolutionPath });
       }
     }

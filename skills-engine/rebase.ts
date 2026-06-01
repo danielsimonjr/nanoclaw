@@ -6,7 +6,7 @@ import path from 'path';
 
 import { clearBackup, createBackup, restoreBackup } from './backup.js';
 import { BASE_DIR, NANOCLAW_DIR } from './constants.js';
-import { copyDir } from './fs-utils.js';
+import { copyDir, toPosix } from './fs-utils.js';
 import { acquireLock } from './lock.js';
 import {
   cleanupMergeState,
@@ -28,7 +28,8 @@ function walkDir(dir: string, root: string): string[] {
     if (entry.isDirectory()) {
       results.push(...walkDir(fullPath, root));
     } else {
-      results.push(path.relative(root, fullPath));
+      // Logical relPaths: compared against POSIX file_hashes keys below.
+      results.push(toPosix(path.relative(root, fullPath)));
     }
   }
   return results;

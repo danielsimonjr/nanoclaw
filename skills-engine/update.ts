@@ -8,7 +8,7 @@ import { parse as parseYaml } from 'yaml';
 
 import { clearBackup, createBackup, restoreBackup } from './backup.js';
 import { BASE_DIR, NANOCLAW_DIR } from './constants.js';
-import { copyDir } from './fs-utils.js';
+import { copyDir, toPosix } from './fs-utils.js';
 import { isCustomizeActive } from './customize.js';
 import { acquireLock } from './lock.js';
 import {
@@ -36,7 +36,9 @@ function walkDir(dir: string, root?: string): string[] {
     if (entry.isDirectory()) {
       results.push(...walkDir(fullPath, rootDir));
     } else {
-      results.push(path.relative(rootDir, fullPath));
+      // Returned as logical relPaths: compared against POSIX manifest keys
+      // (skill.file_hashes, mod.files_modified) and surfaced in the preview.
+      results.push(toPosix(path.relative(rootDir, fullPath)));
     }
   }
   return results;
