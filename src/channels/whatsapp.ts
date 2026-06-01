@@ -55,6 +55,22 @@ export class WhatsAppChannel implements Channel {
   }
 
   private async connectInternal(onFirstOpen?: () => void): Promise<void> {
+    // Tear down any previous socket before creating a new one. Reconnects call
+    // this from the old socket's own connection.update handler; without this,
+    // each reconnect leaks a WASocket plus its event listeners and can deliver
+    // duplicate inbound messages from overlapping sockets. Removing the old
+    // listeners first also stops its 'close' handler from firing during end().
+    if (this.sock) {
+      try {
+        this.sock.ev.removeAllListeners('connection.update');
+        this.sock.ev.removeAllListeners('creds.update');
+        this.sock.ev.removeAllListeners('messages.upsert');
+        this.sock.end(undefined);
+      } catch (err) {
+        logger.debug({ err }, 'Error tearing down previous socket');
+      }
+    }
+
     const authDir = path.join(STORE_DIR, 'auth');
     fs.mkdirSync(authDir, { recursive: true });
 

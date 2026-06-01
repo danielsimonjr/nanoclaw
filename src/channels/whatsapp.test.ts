@@ -53,6 +53,9 @@ function createFakeSocket() {
       on: (event: string, handler: (...args: unknown[]) => void) => {
         ev.on(event, handler);
       },
+      removeAllListeners: (event?: string) => {
+        ev.removeAllListeners(event);
+      },
     },
     user: {
       id: '1234567890:1@s.whatsapp.net',
@@ -264,7 +267,26 @@ describe('WhatsAppChannel', () => {
       triggerDisconnect(428);
 
       expect(channel.isConnected()).toBe(false);
-      // The channel should attempt to reconnect (calls connectInternal again)
+      // Reconnect tears down the previous socket before building a new one, so
+      // sockets/listeners don't leak across reconnects.
+      expect(fakeSocket.end).toHaveBeenCalled();
+    });
+
+    it('does not leak inbound listeners across reconnects', async () => {
+      const opts = createTestOpts();
+      const channel = new WhatsAppChannel(opts);
+      await connectChannel(channel);
+
+      // Several reconnects should not accumulate handlers on the shared emitter.
+      for (let i = 0; i < 3; i++) {
+        triggerDisconnect(428);
+        await new Promise((r) => setTimeout(r, 0));
+        triggerConnection('open');
+      }
+
+      // One handler per inbound event, not one-per-reconnect.
+      expect(fakeSocket._ev.listenerCount('messages.upsert')).toBe(1);
+      expect(fakeSocket._ev.listenerCount('connection.update')).toBe(1);
     });
 
     it('exits on loggedOut disconnect', async () => {
