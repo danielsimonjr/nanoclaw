@@ -5,7 +5,7 @@ import os from 'os';
 import path from 'path';
 
 import { clearBackup, createBackup, restoreBackup } from './backup.js';
-import { BASE_DIR, NANOCLAW_DIR } from './constants.js';
+import { BASE_DIR, BASE_EXCLUDES, NANOCLAW_DIR } from './constants.js';
 import { copyDir, toPosix } from './fs-utils.js';
 import { gitDiffNoIndex } from './git-utils.js';
 import { acquireLock } from './lock.js';
@@ -138,10 +138,10 @@ export async function rebase(newBasePath?: string): Promise<RebaseResult> {
           fs.rmSync(baseAbsDir, { recursive: true, force: true });
         }
         fs.mkdirSync(baseAbsDir, { recursive: true });
-        copyDir(absNewBase, baseAbsDir);
+        copyDir(absNewBase, baseAbsDir, BASE_EXCLUDES);
 
         // Copy new base to working tree
-        copyDir(absNewBase, projectRoot);
+        copyDir(absNewBase, projectRoot, BASE_EXCLUDES);
 
         // Three-way merge per file: new-base ← old-base → saved-working-tree
         const mergeConflicts: string[] = [];

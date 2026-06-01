@@ -15,17 +15,28 @@ export function toPosix(p: string): string {
 }
 
 /**
- * Recursively copy a directory tree from src to dest.
- * Creates destination directories as needed.
+ * Recursively copy a directory tree from src to dest, creating destination
+ * directories as needed.
+ *
+ * `excludes` is a list of entry names (e.g. 'node_modules', '.git') skipped at
+ * every level — used to keep build output, VCS, deps, and runtime data out of
+ * base snapshots and tree copies. Matching is by basename, not path.
  */
-export function copyDir(src: string, dest: string): void {
+export function copyDir(
+  src: string,
+  dest: string,
+  excludes: string[] = [],
+): void {
+  const excludeSet = new Set(excludes);
   for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
+    if (excludeSet.has(entry.name)) continue;
+
     const srcPath = path.join(src, entry.name);
     const destPath = path.join(dest, entry.name);
 
     if (entry.isDirectory()) {
       fs.mkdirSync(destPath, { recursive: true });
-      copyDir(srcPath, destPath);
+      copyDir(srcPath, destPath, excludes);
     } else {
       fs.mkdirSync(path.dirname(destPath), { recursive: true });
       fs.copyFileSync(srcPath, destPath);

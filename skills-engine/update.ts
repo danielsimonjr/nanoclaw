@@ -7,7 +7,7 @@ import path from 'path';
 import { parse as parseYaml } from 'yaml';
 
 import { clearBackup, createBackup, restoreBackup } from './backup.js';
-import { BASE_DIR, NANOCLAW_DIR } from './constants.js';
+import { BASE_DIR, BASE_EXCLUDES, NANOCLAW_DIR } from './constants.js';
 import { copyDir, toPosix } from './fs-utils.js';
 import { isCustomizeActive } from './customize.js';
 import { acquireLock } from './lock.js';
@@ -277,7 +277,7 @@ export async function applyUpdate(newCorePath: string): Promise<UpdateResult> {
       fs.rmSync(baseDir, { recursive: true, force: true });
     }
     fs.mkdirSync(baseDir, { recursive: true });
-    copyDir(newCorePath, baseDir);
+    copyDir(newCorePath, baseDir, BASE_EXCLUDES);
 
     // --- Structured ops: re-apply from all skills ---
     const allNpmDeps: Record<string, string> = {};

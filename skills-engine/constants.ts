@@ -16,3 +16,17 @@ export const BASE_INCLUDES = [
   '.env.example',
   'container/',
 ];
+
+// Directory/file names (at any depth) to exclude when snapshotting the base or
+// copying a new core over the tree — build output, VCS, deps, and runtime data
+// that must never be tracked or diffed. Passed to copyDir().
+export const BASE_EXCLUDES = [
+  'node_modules',
+  '.nanoclaw',
+  '.git',
+  'dist',
+  'data',
+  'groups',
+  'store',
+  'logs',
+];

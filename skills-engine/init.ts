@@ -5,6 +5,7 @@ import path from 'path';
 import {
   BACKUP_DIR,
   BASE_DIR,
+  BASE_EXCLUDES,
   BASE_INCLUDES,
   NANOCLAW_DIR,
 } from './constants.js';
@@ -12,18 +13,6 @@ import { copyDir } from './fs-utils.js';
 import { isGitRepo } from './merge.js';
 import { writeState } from './state.js';
 import { SkillState } from './types.js';
-
-// Directories/files to always exclude from base snapshot
-const BASE_EXCLUDES = [
-  'node_modules',
-  '.nanoclaw',
-  '.git',
-  'dist',
-  'data',
-  'groups',
-  'store',
-  'logs',
-];
 
 export function initNanoclawDir(): void {
   const projectRoot = process.cwd();
