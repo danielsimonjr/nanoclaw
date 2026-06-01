@@ -136,15 +136,15 @@ export function cleanupMergeState(filePath?: string): void {
   if (fs.existsSync(mergeHead)) fs.unlinkSync(mergeHead);
   if (fs.existsSync(mergeMsg)) fs.unlinkSync(mergeMsg);
 
-  // Reset only the specific file's unmerged index entries to avoid
-  // dropping the user's pre-existing staged changes
-  try {
-    if (filePath) {
+  // Reset only the specific file's unmerged index entries. A blanket
+  // `git reset` would unstage the user's unrelated pre-existing staged changes,
+  // so when no file is given we clear the merge markers above but leave the
+  // index untouched.
+  if (filePath) {
+    try {
       execFileSync('git', ['reset', '--', filePath], { stdio: 'pipe' });
-    } else {
-      execSync('git reset', { stdio: 'pipe' });
+    } catch {
+      // May fail if nothing staged for this path — harmless.
     }
-  } catch {
-    // May fail if nothing staged
   }
 }

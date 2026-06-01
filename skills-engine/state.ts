@@ -23,7 +23,28 @@ export function readState(): SkillState {
     );
   }
   const content = fs.readFileSync(statePath, 'utf-8');
-  const state = parse(content) as SkillState;
+  const parsed = parse(content) as unknown;
+
+  // Validate shape up front so a truncated/corrupt file fails with a clear
+  // message here rather than a deep TypeError later (after the lock is held and
+  // an operation is partway through mutating the tree).
+  if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error(
+      '.nanoclaw/state.yaml is corrupt or empty (expected a YAML mapping). ' +
+        'Restore it from backup or re-run initSkillsSystem().',
+    );
+  }
+  const state = parsed as SkillState;
+  if (typeof state.skills_system_version !== 'string') {
+    throw new Error(
+      '.nanoclaw/state.yaml is missing a valid skills_system_version.',
+    );
+  }
+  if (!Array.isArray(state.applied_skills)) {
+    throw new Error(
+      '.nanoclaw/state.yaml has an invalid applied_skills (expected a list).',
+    );
+  }
 
   if (compareSemver(state.skills_system_version, SKILLS_SCHEMA_VERSION) > 0) {
     throw new Error(

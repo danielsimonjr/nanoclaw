@@ -33,6 +33,22 @@ describe('state', () => {
     cleanup(tmpDir);
   });
 
+  it('readState throws a clear error on corrupt/non-mapping state', () => {
+    const statePath = path.join(tmpDir, '.nanoclaw', 'state.yaml');
+    // YAML that parses to a scalar, not a mapping.
+    fs.writeFileSync(statePath, 'just a string\n');
+    expect(() => readState()).toThrow(/corrupt or empty/i);
+  });
+
+  it('readState throws when applied_skills is not a list', () => {
+    const statePath = path.join(tmpDir, '.nanoclaw', 'state.yaml');
+    fs.writeFileSync(
+      statePath,
+      'skills_system_version: 0.1.0\ncore_version: 1.0.0\napplied_skills: oops\n',
+    );
+    expect(() => readState()).toThrow(/applied_skills/i);
+  });
+
   it('readState/writeState roundtrip', () => {
     const state = {
       skills_system_version: '0.1.0',
