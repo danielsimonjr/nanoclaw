@@ -12,20 +12,35 @@ function getBackupDir(): string {
 export function createBackup(filePaths: string[]): void {
   const backupDir = getBackupDir();
   fs.mkdirSync(backupDir, { recursive: true });
-
   for (const filePath of filePaths) {
-    const absPath = path.resolve(filePath);
-    const relativePath = path.relative(process.cwd(), absPath);
-    const backupPath = path.join(backupDir, relativePath);
-    fs.mkdirSync(path.dirname(backupPath), { recursive: true });
-
-    if (fs.existsSync(absPath)) {
-      fs.copyFileSync(absPath, backupPath);
-    } else {
-      // File doesn't exist yet — write a tombstone so restore can delete it
-      fs.writeFileSync(backupPath + TOMBSTONE_SUFFIX, '', 'utf-8');
-    }
+    backupOne(path.resolve(filePath), backupDir);
   }
+}
+
+function backupOne(absPath: string, backupDir: string): void {
+  const backupPath = path.join(
+    backupDir,
+    path.relative(process.cwd(), absPath),
+  );
+
+  if (!fs.existsSync(absPath)) {
+    // Doesn't exist yet — write a tombstone so restore deletes it on abort.
+    fs.mkdirSync(path.dirname(backupPath), { recursive: true });
+    fs.writeFileSync(backupPath + TOMBSTONE_SUFFIX, '', 'utf-8');
+    return;
+  }
+
+  if (fs.statSync(absPath).isDirectory()) {
+    // Recurse: copyFileSync would throw EISDIR on a directory source (e.g. a
+    // file_op that renames/moves a directory), aborting the whole backup.
+    for (const entry of fs.readdirSync(absPath)) {
+      backupOne(path.join(absPath, entry), backupDir);
+    }
+    return;
+  }
+
+  fs.mkdirSync(path.dirname(backupPath), { recursive: true });
+  fs.copyFileSync(absPath, backupPath);
 }
 
 export function restoreBackup(): void {
@@ -42,9 +57,9 @@ export function restoreBackup(): void {
         const tombRelPath = path.relative(backupDir, fullPath);
         const originalRelPath = tombRelPath.slice(0, -TOMBSTONE_SUFFIX.length);
         const originalPath = path.join(process.cwd(), originalRelPath);
-        if (fs.existsSync(originalPath)) {
-          fs.unlinkSync(originalPath);
-        }
+        // rmSync (recursive+force) handles both files and directories and is a
+        // no-op if already gone — unlinkSync would throw on a directory.
+        fs.rmSync(originalPath, { recursive: true, force: true });
       } else {
         const relativePath = path.relative(backupDir, fullPath);
         const originalPath = path.join(process.cwd(), relativePath);

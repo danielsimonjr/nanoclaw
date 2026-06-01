@@ -40,6 +40,37 @@ describe('backup', () => {
     expect(() => createBackup(['does-not-exist.ts'])).not.toThrow();
   });
 
+  it('backs up a directory source by recursing (no EISDIR)', () => {
+    fs.mkdirSync(path.join(tmpDir, 'pkg', 'sub'), { recursive: true });
+    fs.writeFileSync(path.join(tmpDir, 'pkg', 'a.ts'), 'A');
+    fs.writeFileSync(path.join(tmpDir, 'pkg', 'sub', 'b.ts'), 'B');
+
+    expect(() => createBackup(['pkg'])).not.toThrow();
+
+    fs.writeFileSync(path.join(tmpDir, 'pkg', 'a.ts'), 'A-modified');
+    fs.rmSync(path.join(tmpDir, 'pkg', 'sub', 'b.ts'));
+
+    restoreBackup();
+    expect(fs.readFileSync(path.join(tmpDir, 'pkg', 'a.ts'), 'utf-8')).toBe(
+      'A',
+    );
+    expect(
+      fs.readFileSync(path.join(tmpDir, 'pkg', 'sub', 'b.ts'), 'utf-8'),
+    ).toBe('B');
+  });
+
+  it('restore tombstone removes a newly-created path (file or dir)', () => {
+    // Path did not exist at backup time → tombstone → removed on restore.
+    createBackup(['added-dir', 'added-file.ts']);
+    fs.mkdirSync(path.join(tmpDir, 'added-dir'), { recursive: true });
+    fs.writeFileSync(path.join(tmpDir, 'added-dir', 'x.ts'), 'x');
+    fs.writeFileSync(path.join(tmpDir, 'added-file.ts'), 'y');
+
+    restoreBackup();
+    expect(fs.existsSync(path.join(tmpDir, 'added-dir'))).toBe(false);
+    expect(fs.existsSync(path.join(tmpDir, 'added-file.ts'))).toBe(false);
+  });
+
   it('clearBackup removes backup directory', () => {
     fs.mkdirSync(path.join(tmpDir, 'src'), { recursive: true });
     fs.writeFileSync(path.join(tmpDir, 'src', 'app.ts'), 'content');

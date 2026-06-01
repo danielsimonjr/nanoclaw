@@ -134,11 +134,15 @@ export async function applySkill(skillDir: string): Promise<ApplyResult> {
       ...manifest.adds.map((f) =>
         path.join(projectRoot, resolvePathRemap(f, pathRemap)),
       ),
-      ...(manifest.file_ops || [])
-        .filter((op) => op.from)
-        .map((op) =>
-          path.join(projectRoot, resolvePathRemap(op.from!, pathRemap)),
-        ),
+      // Back up every path a file_op touches so an aborted apply fully
+      // reverses: `from` (restored content), `to` (tombstoned → removed; it must
+      // not pre-exist), and `path` for deletes (restored content). Backing up
+      // only `from` previously orphaned rename targets and lost deleted files.
+      ...(manifest.file_ops || []).flatMap((op) =>
+        [op.from, op.to, op.path]
+          .filter((p): p is string => !!p)
+          .map((p) => path.join(projectRoot, resolvePathRemap(p, pathRemap))),
+      ),
       path.join(projectRoot, 'package.json'),
       path.join(projectRoot, 'package-lock.json'),
       path.join(projectRoot, '.env.example'),
