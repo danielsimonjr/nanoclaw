@@ -7,6 +7,7 @@ import path from 'path';
 import { clearBackup, createBackup, restoreBackup } from './backup.js';
 import { BASE_DIR, NANOCLAW_DIR } from './constants.js';
 import { copyDir, toPosix } from './fs-utils.js';
+import { gitDiffNoIndex } from './git-utils.js';
 import { acquireLock } from './lock.js';
 import {
   cleanupMergeState,
@@ -97,30 +98,20 @@ export async function rebase(newBasePath?: string): Promise<RebaseResult> {
       let filesInPatch = 0;
 
       for (const relPath of trackedFiles) {
-        const basePath = path.join(baseAbsDir, relPath);
-        const workingPath = path.join(projectRoot, relPath);
+        const baseExists = fs.existsSync(path.join(baseAbsDir, relPath));
+        const workingExists = fs.existsSync(path.join(projectRoot, relPath));
 
-        const oldPath = fs.existsSync(basePath) ? basePath : '/dev/null';
-        const newPath = fs.existsSync(workingPath) ? workingPath : '/dev/null';
+        if (!baseExists && !workingExists) continue;
 
-        if (oldPath === '/dev/null' && newPath === '/dev/null') continue;
+        // relPath is already POSIX; pass paths relative to projectRoot via
+        // git diff --no-index (see git-utils.ts). /dev/null marks add/remove.
+        const oldArg = baseExists ? `${BASE_DIR}/${relPath}` : '/dev/null';
+        const newArg = workingExists ? relPath : '/dev/null';
 
-        try {
-          const diff = execFileSync('diff', ['-ruN', oldPath, newPath], {
-            encoding: 'utf-8',
-          });
-          if (diff.trim()) {
-            combinedPatch += diff;
-            filesInPatch++;
-          }
-        } catch (err: unknown) {
-          const execErr = err as { status?: number; stdout?: string };
-          if (execErr.status === 1 && execErr.stdout) {
-            combinedPatch += execErr.stdout;
-            filesInPatch++;
-          } else {
-            throw err;
-          }
+        const diff = gitDiffNoIndex([oldArg, newArg], projectRoot);
+        if (diff.trim()) {
+          combinedPatch += diff;
+          filesInPatch++;
         }
       }
 
