@@ -157,7 +157,13 @@ describe('fetch-upstream.sh', () => {
     expect(status.REMOTE).toBe('upstream');
     expect(status.CURRENT_VERSION).toBe('1.0.0');
     expect(status.NEW_VERSION).toBe('2.0.0');
-    expect(status.TEMP_DIR).toMatch(/^\/tmp\/nanoclaw-update-/);
+    // On git-bash (Windows) the script emits a native path via cygpath; on
+    // POSIX it stays a /tmp/... path. Both contain the unique dir name.
+    if (process.platform === 'win32') {
+      expect(status.TEMP_DIR).toMatch(/nanoclaw-update-/);
+    } else {
+      expect(status.TEMP_DIR).toMatch(/^\/tmp\/nanoclaw-update-/);
+    }
 
     // Verify extracted files exist
     expect(fs.existsSync(path.join(status.TEMP_DIR, 'package.json'))).toBe(

@@ -45,6 +45,15 @@ fi
 # plus always include migrations/ for the migration runner.
 TEMP_DIR=$(mktemp -d /tmp/nanoclaw-update-XXXX)
 trap 'rm -rf "$TEMP_DIR"' ERR
+
+# Windows `node` (invoked below) and the update runner that consumes TEMP_DIR
+# cannot resolve git-bash's /tmp mount, so expose a native path when running
+# under MSYS/Cygwin bash. On Linux/macOS cygpath is absent and this is a no-op.
+TEMP_DIR_OUT="$TEMP_DIR"
+if command -v cygpath >/dev/null 2>&1; then
+  TEMP_DIR_OUT="$(cygpath -m "$TEMP_DIR")"
+fi
+
 echo "Extracting $REMOTE/main to $TEMP_DIR..."
 
 CANDIDATES=$(node -e "
@@ -71,12 +80,12 @@ git archive "$REMOTE/main" -- $PATHS | tar -x -C "$TEMP_DIR"
 # Get new version from extracted package.json
 NEW_VERSION="unknown"
 if [ -f "$TEMP_DIR/package.json" ]; then
-  NEW_VERSION=$(node -e "console.log(require('$TEMP_DIR/package.json').version || 'unknown')")
+  NEW_VERSION=$(node -e "console.log(require('$TEMP_DIR_OUT/package.json').version || 'unknown')")
 fi
 
 echo ""
 echo "<<< STATUS"
-echo "TEMP_DIR=$TEMP_DIR"
+echo "TEMP_DIR=$TEMP_DIR_OUT"
 echo "REMOTE=$REMOTE"
 echo "CURRENT_VERSION=$CURRENT_VERSION"
 echo "NEW_VERSION=$NEW_VERSION"
