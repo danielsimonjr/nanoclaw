@@ -252,55 +252,82 @@ export function storeMessage(msg: NewMessage): void {
   );
 }
 
+// The message cursor is a keyset of the form `${timestamp}|${id}`. WhatsApp
+// timestamps have only second resolution, so a plain `timestamp > ?` cursor
+// drops a second same-second message that arrives after the cursor advanced.
+// Ordering and filtering by (timestamp, id) makes the cursor unambiguous.
+// `id` (the WhatsApp message id) is stable across redelivery, so INSERT OR
+// REPLACE does not cause reprocessing.
+export const buildMessageCursor = (timestamp: string, id: string): string =>
+  `${timestamp}|${id}`;
+
+function parseCursor(cursor: string): { ts: string; id: string } {
+  const sep = cursor.indexOf('|');
+  if (sep === -1) {
+    // Legacy/fresh cursor: a bare timestamp (or ''). Use a max-id sentinel so
+    // the comparison stays exclusive at that timestamp — exactly the old
+    // `timestamp > ?` behavior — so the upgrade neither reprocesses nor drops.
+    return { ts: cursor, id: '￿' };
+  }
+  return { ts: cursor.slice(0, sep), id: cursor.slice(sep + 1) };
+}
+
 export function getNewMessages(
   jids: string[],
-  lastTimestamp: string,
+  lastCursor: string,
   botPrefix: string,
-): { messages: NewMessage[]; newTimestamp: string } {
-  if (jids.length === 0) return { messages: [], newTimestamp: lastTimestamp };
+): { messages: NewMessage[]; newCursor: string } {
+  if (jids.length === 0) return { messages: [], newCursor: lastCursor };
 
   const placeholders = jids.map(() => '?').join(',');
+  const { ts, id } = parseCursor(lastCursor);
   // Filter bot messages using both the is_bot_message flag AND the content
   // prefix as a backstop for messages written before the migration ran.
   const sql = `
     SELECT id, chat_jid, sender, sender_name, content, timestamp
     FROM messages
-    WHERE timestamp > ? AND chat_jid IN (${placeholders})
+    WHERE (timestamp > ? OR (timestamp = ? AND id > ?))
+      AND chat_jid IN (${placeholders})
       AND is_bot_message = 0 AND content NOT LIKE ?
       AND content != '' AND content IS NOT NULL
-    ORDER BY timestamp
+    ORDER BY timestamp, id
   `;
 
   const rows = db
     .prepare(sql)
-    .all(lastTimestamp, ...jids, `${botPrefix}:%`) as NewMessage[];
+    .all(ts, ts, id, ...jids, `${botPrefix}:%`) as NewMessage[];
 
-  let newTimestamp = lastTimestamp;
-  for (const row of rows) {
-    if (row.timestamp > newTimestamp) newTimestamp = row.timestamp;
-  }
+  // Rows are ordered by (timestamp, id), so the last row is the new cursor.
+  const newCursor =
+    rows.length > 0
+      ? buildMessageCursor(
+          rows[rows.length - 1].timestamp,
+          rows[rows.length - 1].id,
+        )
+      : lastCursor;
 
-  return { messages: rows, newTimestamp };
+  return { messages: rows, newCursor };
 }
 
 export function getMessagesSince(
   chatJid: string,
-  sinceTimestamp: string,
+  sinceCursor: string,
   botPrefix: string,
 ): NewMessage[] {
+  const { ts, id } = parseCursor(sinceCursor);
   // Filter bot messages using both the is_bot_message flag AND the content
   // prefix as a backstop for messages written before the migration ran.
   const sql = `
     SELECT id, chat_jid, sender, sender_name, content, timestamp
     FROM messages
-    WHERE chat_jid = ? AND timestamp > ?
+    WHERE chat_jid = ? AND (timestamp > ? OR (timestamp = ? AND id > ?))
       AND is_bot_message = 0 AND content NOT LIKE ?
       AND content != '' AND content IS NOT NULL
-    ORDER BY timestamp
+    ORDER BY timestamp, id
   `;
   return db
     .prepare(sql)
-    .all(chatJid, sinceTimestamp, `${botPrefix}:%`) as NewMessage[];
+    .all(chatJid, ts, ts, id, `${botPrefix}:%`) as NewMessage[];
 }
 
 export function createTask(

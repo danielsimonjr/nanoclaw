@@ -264,14 +264,15 @@ describe('getNewMessages', () => {
   });
 
   it('returns new messages across multiple groups', () => {
-    const { messages, newTimestamp } = getNewMessages(
+    const { messages, newCursor } = getNewMessages(
       ['group1@g.us', 'group2@g.us'],
       '2024-01-01T00:00:00.000Z',
       'Andy',
     );
     // Excludes bot message, returns 3 user messages
     expect(messages).toHaveLength(3);
-    expect(newTimestamp).toBe('2024-01-01T00:00:04.000Z');
+    // Cursor is now a (timestamp, id) keyset.
+    expect(newCursor).toBe('2024-01-01T00:00:04.000Z|a4');
   });
 
   it('filters by timestamp', () => {
@@ -286,9 +287,43 @@ describe('getNewMessages', () => {
   });
 
   it('returns empty for no registered groups', () => {
-    const { messages, newTimestamp } = getNewMessages([], '', 'Andy');
+    const { messages, newCursor } = getNewMessages([], '', 'Andy');
     expect(messages).toHaveLength(0);
-    expect(newTimestamp).toBe('');
+    expect(newCursor).toBe('');
+  });
+
+  it('does not drop a second message arriving in the same second', () => {
+    // Two messages, identical second-resolution timestamp, different ids.
+    const sameTs = '2024-01-01T00:00:10.000Z';
+    store({
+      id: 'b1',
+      chat_jid: 'group1@g.us',
+      sender: 'user@s.whatsapp.net',
+      sender_name: 'User',
+      content: 'first this second',
+      timestamp: sameTs,
+    });
+    store({
+      id: 'b2',
+      chat_jid: 'group1@g.us',
+      sender: 'user@s.whatsapp.net',
+      sender_name: 'User',
+      content: 'second this second',
+      timestamp: sameTs,
+    });
+
+    // Process up to b1 (cursor = b1's keyset), as the message loop would.
+    const cursorAfterB1 = `${sameTs}|b1`;
+
+    // getNewMessages must still surface b2 (same timestamp, higher id).
+    const { messages } = getNewMessages(['group1@g.us'], cursorAfterB1, 'Andy');
+    expect(messages.map((m) => m.id)).toContain('b2');
+    expect(messages.map((m) => m.id)).not.toContain('b1');
+
+    // getMessagesSince agrees.
+    const since = getMessagesSince('group1@g.us', cursorAfterB1, 'Andy');
+    expect(since.map((m) => m.id)).toContain('b2');
+    expect(since.map((m) => m.id)).not.toContain('b1');
   });
 });
 

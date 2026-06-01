@@ -22,6 +22,7 @@ import {
 } from './container-runtime.js';
 import {
   getAllChats,
+  buildMessageCursor,
   getAllRegisteredGroups,
   getAllSessions,
   getAllTasks,
@@ -162,8 +163,11 @@ async function processGroupMessages(chatJid: string): Promise<boolean> {
   // Advance cursor so the piping path in startMessageLoop won't re-fetch
   // these messages. Save the old cursor so we can roll back on error.
   const previousCursor = lastAgentTimestamp[chatJid] || '';
-  lastAgentTimestamp[chatJid] =
-    missedMessages[missedMessages.length - 1].timestamp;
+  const lastMissed = missedMessages[missedMessages.length - 1];
+  lastAgentTimestamp[chatJid] = buildMessageCursor(
+    lastMissed.timestamp,
+    lastMissed.id,
+  );
   saveState();
 
   logger.info(
@@ -334,7 +338,7 @@ async function startMessageLoop(): Promise<void> {
   while (true) {
     try {
       const jids = Object.keys(registeredGroups);
-      const { messages, newTimestamp } = getNewMessages(
+      const { messages, newCursor } = getNewMessages(
         jids,
         lastTimestamp,
         ASSISTANT_NAME,
@@ -344,7 +348,7 @@ async function startMessageLoop(): Promise<void> {
         logger.info({ count: messages.length }, 'New messages');
 
         // Advance the "seen" cursor for all messages immediately
-        lastTimestamp = newTimestamp;
+        lastTimestamp = newCursor;
         saveState();
 
         // Deduplicate by group
@@ -399,8 +403,11 @@ async function startMessageLoop(): Promise<void> {
               { chatJid, count: messagesToSend.length },
               'Piped messages to active container',
             );
-            lastAgentTimestamp[chatJid] =
-              messagesToSend[messagesToSend.length - 1].timestamp;
+            const lastSent = messagesToSend[messagesToSend.length - 1];
+            lastAgentTimestamp[chatJid] = buildMessageCursor(
+              lastSent.timestamp,
+              lastSent.id,
+            );
             saveState();
             // Show typing indicator while the container processes the piped message
             channel
