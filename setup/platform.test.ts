@@ -20,6 +20,8 @@ describe('getServiceManager', () => {
     const result = getServiceManager();
     if (platform === 'macos') {
       expect(result).toBe('launchd');
+    } else if (platform === 'windows') {
+      expect(result).toBe('schtasks');
     } else {
       expect(['systemd', 'none']).toContain(result);
     }

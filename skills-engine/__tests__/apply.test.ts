@@ -54,7 +54,9 @@ describe('apply', () => {
       adds: ['src/newfile.ts'],
       modifies: [],
       addFiles: { 'src/newfile.ts': 'export const x = 1;' },
-      post_apply: [`echo "applied" > "${markerFile}"`],
+      // No quotes around the word: cmd.exe would write them literally, whereas
+      // POSIX sh strips them. The trailing newline/space is handled by .trim().
+      post_apply: [`echo applied > "${markerFile}"`],
     });
 
     const result = await applySkill(skillDir);

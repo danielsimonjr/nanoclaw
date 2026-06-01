@@ -47,7 +47,11 @@ vi.mock('fs', async () => {
     default: {
       ...actual,
       existsSync: vi.fn((p: string) =>
-        p.endsWith(`agent-runner/dist/index.js`) ? agentBuilt.exists : false,
+        // Normalize separators: the production path is built with path.join, so
+        // it uses '\' on Windows.
+        p.replace(/\\/g, '/').endsWith(`agent-runner/dist/index.js`)
+          ? agentBuilt.exists
+          : false,
       ),
       mkdirSync: vi.fn(),
       writeFileSync: vi.fn(),
