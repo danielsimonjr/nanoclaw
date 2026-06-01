@@ -23,6 +23,27 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run typecheck
-      # Core suite (src/ + setup/). The skills-engine tests are POSIX/git-heavy
-      # and run separately on Linux in skill-tests.yml.
+      # Core suite (src/ + setup/). The skills-engine tests are git-heavy and
+      # run as a separate Linux-only job below (the `engine` job).
       - run: npx vitest run src/ setup/
+
+  # The skills-engine suite (update/rebase/merge/apply/customize) historically
+  # ran in no CI workflow at all, so regressions there went uncaught. Run the
+  # full `vitest` suite on Linux, where the git-driven tests are fast and
+  # deterministic. (They now also pass natively on Windows, but are kept off the
+  # Windows matrix to avoid process-spawn-timing flakiness.)
+  engine:
+    name: engine (ubuntu, node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20, 22]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci
+      - run: npm test
