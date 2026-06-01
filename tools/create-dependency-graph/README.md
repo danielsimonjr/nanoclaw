@@ -16,11 +16,23 @@ npx tsx tools/create-dependency-graph/create-dependency-graph.ts --root="$(pwd)"
 Options:
 
 - `--root=<path>` — project root to analyze (default: current directory)
-- `--include-tests`, `-t` — include `*.test.ts` files in the analysis (drives `TEST_COVERAGE.md`)
+- `--exclude=<a,b,c>` — replace the default skip list of directory names
+- `--also-exclude=<a,b>` — add directory names to the default skip list
+- `--include-tests`, `-t` — include `*.test.ts` files in the analysis (drives `TEST_COVERAGE.md` and makes unused-export detection test-aware)
 - `--help`, `-h` — show usage
 
-It reads `<root>/package.json` for the project name/version and scans
-`<root>/src`.
+It reads `<root>/package.json` for the project name/version (and its `scripts`,
+to recognize entry points like `tsx src/whatsapp-auth.ts`), then scans the
+**whole project root** for first-party `.ts` source, skipping a default set of
+non-source directories:
+
+```
+node_modules, dist, build, coverage, .git, .nanoclaw, .github, .claude,
+tools, docs, groups, store, data, launchd, assets, config-examples, repo-tokens
+```
+
+`__tests__/` and `__mocks__/` are skipped for the source graph but still scanned
+for `--include-tests` coverage.
 
 ## Output
 
@@ -35,18 +47,21 @@ Written to `<root>/docs/architecture/`:
 
 ## Scope (NanoClaw note)
 
-The scanner only walks `src/` (NanoClaw's orchestrator core). It does **not**
-cover `setup/`, `skills-engine/`, or `container/agent-runner/` — those
-subsystems are described in the hand-authored docs under `docs/architecture/`
-([ARCHITECTURE.md](../../docs/architecture/ARCHITECTURE.md),
-[COMPONENTS.md](../../docs/architecture/COMPONENTS.md)).
+The scanner walks **all first-party TypeScript source**: `src/`, `setup/`,
+`skills-engine/`, `scripts/`, and `container/agent-runner/src/` (the separate
+agent package appears as its own cluster, with no import edges to the main app).
+The `tools/` folder and the non-source directories listed above are excluded.
 
 ## Features
 
-- Parses imports and exports per file
-- Categorizes files into logical modules
+- Parses static **and dynamic** (`import('./x')`) imports, plus exports per file
+- Categorizes files into modules by directory (across all source roots)
+- Recognizes entry points (shebang scripts, `index.ts`, `scripts/`, npm-script
+  targets, `*.config.ts`, and files referenced by name like spawned children)
+  so they aren't mis-reported as unused
 - Detects circular dependencies (runtime vs type-only)
-- Flags potentially unused files and exports
+- Flags potentially unused files and exports (test imports count as usage with
+  `--include-tests`)
 - Generates statistics (file count, LOC, export count, etc.)
 - Produces human-readable Markdown plus machine-readable JSON/YAML
 

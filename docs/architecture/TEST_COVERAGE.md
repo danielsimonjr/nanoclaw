@@ -1,41 +1,52 @@
 # Test Coverage Analysis
 
-**Generated**: 2026-05-31
-
-The full test suite is **458 tests across 42 files** (18 source-level suites, 4 setup suites, and supporting files), all green. Tests use [Vitest](https://vitest.dev/) with in-memory SQLite (`_initTestDatabase`) and surgical vi.mock for filesystem/process/config boundaries.
-
----
+**Generated**: 2026-06-01
 
 ## Summary
 
 | Metric | Count |
 |--------|-------|
-| Total Source Files | 17 |
-| Total Test Files | 18 |
-| Source Files with Tests | 16 |
-| Source Files without Tests | 1 |
-| File-level Coverage | 94.1% |
-
-> **Note**: "file-level coverage" means each source file is directly imported by at least one test file. It does not measure line or branch coverage within files — some code paths (e.g., graceful shutdown, reconnect loops, QR code handling) are exercised indirectly or not at all.
-
----
-
-## How to Run
-
-```bash
-npm test            # run the full suite once
-npm run typecheck   # TypeScript type-check without running tests
-```
-
-Tests that touch the filesystem create real temporary directories under `os.tmpdir()` and clean up in `afterAll`. All other I/O is mocked via `vi.mock`.
+| Total Source Files | 61 |
+| Total Test Files | 44 |
+| Source Files with Tests | 37 |
+| Source Files without Tests | 24 |
+| Coverage | 60.7% |
 
 ---
 
 ## Source Files Without Test Coverage
 
-### `src/whatsapp-auth.ts`
+The following 24 source files are not directly imported by any test file:
 
-This file is a self-executing setup script that writes WhatsApp QR-code authentication state to disk by launching a temporary Baileys socket, printing the QR to the terminal, and waiting for the user to scan it. It has no testable return value, no dependency-injected interfaces, and cannot run in a headless CI environment (it requires a real WhatsApp connection and interactive TTY). The logic is extremely thin: open socket, print QR, wait for `connection === 'open'`, exit. There is no domain logic to unit-test, and the behavior is validated by the `/setup` flow rather than automated tests.
+### agent-runner/
+
+- `container/agent-runner/src/index.ts` → Expected test: `tests/unit/agent-runner/index.test.ts`
+- `container/agent-runner/src/ipc-mcp-stdio.ts` → Expected test: `tests/unit/agent-runner/ipc-mcp-stdio.test.ts`
+
+### root/
+
+- `scripts/apply-skill.ts` → Expected test: `tests/unit/root/apply-skill.test.ts`
+- `scripts/post-update.ts` → Expected test: `tests/unit/root/post-update.test.ts`
+- `scripts/run-ci-tests.ts` → Expected test: `tests/unit/root/run-ci-tests.test.ts`
+- `scripts/run-migrations.ts` → Expected test: `tests/unit/root/run-migrations.test.ts`
+- `scripts/update-core.ts` → Expected test: `tests/unit/root/update-core.test.ts`
+- `setup/container.ts` → Expected test: `tests/unit/root/container.test.ts`
+- `setup/environment.ts` → Expected test: `tests/unit/root/environment.test.ts`
+- `setup/groups.ts` → Expected test: `tests/unit/root/groups.test.ts`
+- `setup/index.ts` → Expected test: `tests/unit/root/index.test.ts`
+- `setup/mounts.ts` → Expected test: `tests/unit/root/mounts.test.ts`
+- `setup/node-script.ts` → Expected test: `tests/unit/root/node-script.test.ts`
+- `setup/register.ts` → Expected test: `tests/unit/root/register.test.ts`
+- `setup/status.ts` → Expected test: `tests/unit/root/status.test.ts`
+- `setup/verify.ts` → Expected test: `tests/unit/root/verify.test.ts`
+- `setup/whatsapp-auth.ts` → Expected test: `tests/unit/root/whatsapp-auth.test.ts`
+- `skills-engine/git-utils.ts` → Expected test: `tests/unit/root/git-utils.test.ts`
+- `skills-engine/index.ts` → Expected test: `tests/unit/root/index.test.ts`
+- `skills-engine/init.ts` → Expected test: `tests/unit/root/init.test.ts`
+- `skills-engine/migrate.ts` → Expected test: `tests/unit/root/migrate.test.ts`
+- `src/whatsapp-auth.ts` → Expected test: `tests/unit/root/whatsapp-auth.test.ts`
+- `vitest.config.ts` → Expected test: `tests/unit/root/vitest.config.test.ts`
+- `vitest.skills.config.ts` → Expected test: `tests/unit/root/vitest.skills.config.test.ts`
 
 ---
 
@@ -43,162 +54,91 @@ This file is a self-executing setup script that writes WhatsApp QR-code authenti
 
 | Source File | Test Files |
 |-------------|------------|
-| `src/channels/whatsapp.ts` | `channels/whatsapp.test.ts` |
-| `src/config.ts` | `src/formatting.test.ts` |
-| `src/container-runner.ts` | `src/container-runner-host.test.ts`, `src/container-runner.test.ts` |
-| `src/container-runtime.ts` | `src/container-runtime.test.ts` |
-| `src/db.ts` | `channels/whatsapp.test.ts`, `src/db-accessors.test.ts`, `src/db.test.ts`, `src/ipc-auth.test.ts`, `src/ipc-watcher.test.ts`, `src/routing.test.ts`, `src/task-scheduler-run.test.ts`, `src/task-scheduler.test.ts` |
-| `src/env.ts` | `src/env.test.ts` |
-| `src/fs-sync.ts` | `src/fs-sync.test.ts` |
-| `src/group-folder.ts` | `src/group-folder.test.ts` |
-| `src/group-queue.ts` | `src/group-queue.test.ts` |
-| `src/index.ts` | `src/routing.test.ts` |
-| `src/ipc.ts` | `src/ipc-auth.test.ts`, `src/ipc-watcher.test.ts` |
-| `src/logger.ts` | `src/container-runtime.test.ts` |
-| `src/mount-security.ts` | `src/mount-security.test.ts` |
-| `src/router.ts` | `src/formatting.test.ts`, `src/router-routing.test.ts` |
-| `src/task-scheduler.ts` | `src/task-scheduler-run.test.ts`, `src/task-scheduler.test.ts` |
-| `src/types.ts` | (imported by 9 test files) |
+| `scripts/generate-ci-matrix.ts` | `ci-matrix.test.ts` |
+| `setup/platform.ts` | `platform-windows.test.ts`, `platform.test.ts` |
+| `setup/service.ts` | `service.test.ts` |
+| `skills-engine/apply.ts` | `apply.test.ts` |
+| `skills-engine/backup.ts` | `backup.test.ts` |
+| `skills-engine/constants.ts` | `constants.test.ts`, `customize.test.ts`, `lock.test.ts` |
+| `skills-engine/customize.ts` | `customize.test.ts` |
+| `skills-engine/file-ops.ts` | `file-ops.test.ts` |
+| `skills-engine/fs-utils.ts` | `fs-utils.test.ts` |
+| `skills-engine/lock.ts` | `lock.test.ts` |
+| `skills-engine/manifest.ts` | `manifest.test.ts` |
+| `skills-engine/merge.ts` | `merge.test.ts` |
+| `skills-engine/path-remap.ts` | `path-remap.test.ts` |
+| `skills-engine/rebase.ts` | `rebase.test.ts` |
+| `skills-engine/replay.ts` | `replay.test.ts` |
+| `skills-engine/resolution-cache.ts` | `resolution-cache.test.ts` |
+| `skills-engine/state.ts` | `apply.test.ts`, `customize.test.ts`, `manifest.test.ts`, `path-remap.test.ts`, `state.test.ts`, `update.test.ts` |
+| `skills-engine/structured.ts` | `structured.test.ts` |
+| `skills-engine/types.ts` | `ci-matrix.test.ts` |
+| `skills-engine/uninstall.ts` | `uninstall.test.ts` |
+| `skills-engine/update.ts` | `update.test.ts` |
+| `channels/whatsapp.ts` | `whatsapp.test.ts` |
+| `src/config.ts` | `formatting.test.ts` |
+| `src/container-runner.ts` | `container-runner-host-e2e.test.ts`, `container-runner-host.test.ts`, `container-runner.test.ts`, `task-scheduler-run.test.ts` |
+| `src/container-runtime.ts` | `container-runtime.test.ts` |
+| `src/db.ts` | `whatsapp.test.ts`, `db-accessors.test.ts`, `db.test.ts`, `ipc-auth.test.ts`, `ipc-watcher.test.ts`, `routing.test.ts`, `task-scheduler-run.test.ts`, `task-scheduler.test.ts` |
+| `src/env.ts` | `env.test.ts` |
+| `src/fs-sync.ts` | `fs-sync.test.ts` |
+| `src/group-folder.ts` | `group-folder.test.ts`, `task-scheduler-run.test.ts` |
+| `src/group-queue.ts` | `group-queue.test.ts` |
+| `src/index.ts` | `routing.test.ts` |
+| `src/ipc.ts` | `ipc-auth.test.ts`, `ipc-watcher.test.ts` |
+| `src/logger.ts` | `container-runtime.test.ts` |
+| `src/mount-security.ts` | `mount-security.test.ts` |
+| `src/router.ts` | `formatting.test.ts`, `router-routing.test.ts` |
+| `src/task-scheduler.ts` | `task-scheduler-run.test.ts`, `task-scheduler.test.ts` |
+| `src/types.ts` | `container-runner-host-e2e.test.ts`, `container-runner-host.test.ts`, `container-runner.test.ts`, `db-accessors.test.ts`, `formatting.test.ts`, `ipc-auth.test.ts`, `ipc-watcher.test.ts`, `mount-security.test.ts`, `router-routing.test.ts`, `task-scheduler-run.test.ts` |
 
 ---
 
-## Per-Suite Breakdown
+## Test File Details
 
-### Security
-
-**`src/mount-security.test.ts`** — `src/mount-security.ts`
-
-Verifies the additional-mount allowlist system that prevents container agents from escalating filesystem access. Tests cover:
-- `loadMountAllowlist`: missing file returns null; invalid JSON cached as failure; `allowedRoots` must be an array; `nonMainReadOnly` must be a boolean; user-provided `blockedPatterns` are merged with built-in defaults (`.ssh`, `id_rsa`, etc.); successful load is cached.
-- `validateMount` allowlist gating: no allowlist blocks all mounts; path under an allowed root is permitted; path outside is rejected; non-existent path rejected.
-- `validateMount` blocked patterns: `.ssh` directories blocked even under an allowed root; case-insensitive matching catches `.SSH` and `Credentials`.
-- `validateMount` container path validation: `..` traversal rejected; absolute paths rejected; colon injection (e.g., `foo:rw`) rejected; null byte rejected; defaults basename when no container path given.
-- `validateMount` malformed host path: undefined host path does not throw; empty/whitespace path rejected; colon and control characters in host path rejected.
-- `validateMount` symlink escape: symlink inside an allowed root that resolves outside is rejected via `fs.realpathSync`; symlink that resolves inside is allowed.
-- `validateMount` read/write downgrade: main group gets read-write on an rw root; root configured read-only overrides the request; `nonMainReadOnly=true` forces read-only for non-main groups.
-- `validateAdditionalMounts`: returns only passing mounts prefixed with `/workspace/extra/`; empty array when all rejected.
-- `generateAllowlistTemplate`: produces valid JSON shaped like a `MountAllowlist`.
-- `hostPathHasDisallowedColon`: POSIX rejects any colon; Windows permits single drive-letter colon but rejects NTFS streams and multi-colon paths.
-
-**`src/ipc-auth.test.ts`** — `src/ipc.ts`, `src/db.ts`
-
-Directly calls `processTaskIpc` with crafted inputs to verify every authorization gate. Tests cover:
-- *schedule_task*: main can schedule for another group; non-main can schedule for itself; non-main cannot schedule for another group; unregistered target JID rejected.
-- *pause_task / resume_task / cancel_task*: main can act on any task; non-main can act on its own tasks; non-main cannot act on another group's tasks.
-- *register_group*: non-main group cannot register; unsafe folder path (`../../outside`) rejected; main can register a brand-new JID+folder; folder-hijack guard rejects re-binding an existing folder to a different JID; re-pointing an existing JID to a different folder also rejected; missing required fields rejected.
-- *refresh_groups*: non-main group cannot trigger a metadata refresh.
-- *IPC message authorization* (the `isMain || targetGroup.folder === sourceGroup` check): main can send to any JID including unregistered; non-main can only send to its own chat.
-- *schedule_task schedule types*: cron with `next_run` computed; invalid cron expression rejected; interval `next_run` correct to within 1 s; invalid interval (non-numeric, zero) rejected; invalid once timestamp rejected.
-- *context_mode*: `group` and `isolated` accepted; invalid mode defaults to `group`; missing mode defaults to `group`.
-
-**`src/ipc-watcher.test.ts`** — `src/ipc.ts`, `src/db.ts`
-
-Tests the full file-based watcher loop using a real temporary directory and fake timers. Tests cover:
-- Message authorization: authorized message delivered and file consumed; non-main group spoofing another chat blocked (file still consumed); main group can send to any chat; malformed JSON quarantined to `errors/` directory; the reserved `errors/` directory is skipped during group scanning.
-- Task routing: group schedules task for itself via file — task appears in SQLite; malformed task file quarantined.
-
-### Data Layer
-
-**`src/db.test.ts`** — `src/db.ts`
-
-Core schema and migration tests. Uses in-memory SQLite. Tests the `context_mode` column migration (idempotent `ALTER TABLE`).
-
-**`src/db-accessors.test.ts`** — `src/db.ts`, `src/types.ts`
-
-Thorough tests of every exported accessor. Covers `storeMessage`, `getNewMessages` (cursor, bot filtering, multi-group), `getMessagesSince`, `createTask` / `getTaskById` / `getAllTasks` / `updateTask` / `deleteTask` / `getDueTasks` / `updateTaskAfterRun` / `logTaskRun`, `storeChatMetadata` (upsert with COALESCE), `updateChatName`, `getAllChats`, `setRegisteredGroup` / `getRegisteredGroup` / `getAllRegisteredGroups` (including folder-safety validation), `setSession` / `getAllSessions`, `setRouterState` / `getRouterState`.
-
-**`src/channels/whatsapp.test.ts`** — `src/channels/whatsapp.ts`, `src/db.ts`
-
-WhatsApp channel behavior without a real socket. Tests `sendMessage` queuing when disconnected, `flushOutgoingQueue` behavior on reconnect (re-queues on failure), `ownsJid` routing, and basic inbound message handling.
-
-### Runtime and Container
-
-**`src/container-runner.test.ts`** — `src/container-runner.ts`, `src/types.ts`
-
-Tests `driveAgentProcess` behavior via a controllable fake `ChildProcess` (EventEmitter + PassThrough streams). Uses container mode (mock `isHostMode = false`). Covers:
-- Streamed OUTPUT markers: single result, multiple results, partial buffer (marker split across chunks), newSessionId extraction.
-- Timeout: hard timeout with no output → `status: 'error'`; timeout after output → `status: 'success'` (idle cleanup path).
-- Stdin secrets: `input.secrets` is present when stdin is written, absent from the object after; run log does not contain secret values.
-- Exit codes: non-zero exit with no output → error; zero exit → success.
-- `onOutput` callback errors do not crash the driver.
-
-**`src/container-runner-host.test.ts`** — `src/container-runner.ts`, `src/types.ts`
-
-Same driver behavior as above, but with `isHostMode = true` (mocked). Adds:
-- Missing agent-runner build returns `{status:'error'}` without spawning.
-- `spawn` is called with `process.execPath` and the `dist/index.js` entry point.
-- Secrets / timeout / output streaming behavior is identical to container mode (shared `driveAgentProcess`).
-
-**`src/container-runtime.test.ts`** — `src/container-runtime.ts`, `src/logger.ts`
-
-Tests runtime detection (`CONTAINER_RUNTIME` env var), `isHostMode()`, `bindMountArgs` for Docker and Podman flag formats, and `stopContainer` command construction.
-
-### Scheduler
-
-**`src/task-scheduler.test.ts`** — `src/task-scheduler.ts`, `src/db.ts`
-
-Tests the scheduler loop's safety guard: a due task with an invalid `group_folder` path (`../../outside`) is immediately paused in SQLite to prevent retry churn, and the error is logged.
-
-**`src/task-scheduler-run.test.ts`** — `src/task-scheduler.ts`, `src/db.ts`, `src/types.ts`
-
-End-to-end task execution with a mocked `runContainerAgent`. Tests cover:
-- Successful task run: `logTaskRun` written, `updateTaskAfterRun` called with correct `nextRun` for interval and cron types; `once` tasks transition to `completed`.
-- `context_mode=group` uses the group's current session ID; `context_mode=isolated` uses no session.
-- Agent error: `logTaskRun` records the error; task status not changed.
-- `sendMessage` called with the streamed result.
-- Task skipped if not found in registered groups.
-
-### IPC
-
-Covered by **`src/ipc-auth.test.ts`** and **`src/ipc-watcher.test.ts`** described above under Security.
-
-### GroupQueue
-
-**`src/group-queue.test.ts`** — `src/group-queue.ts`
-
-Tests the concurrency and ordering invariants. Uses fake timers. Covers:
-- At most one container active per group simultaneously (serialization).
-- Global `MAX_CONCURRENT_CONTAINERS` ceiling: groups beyond the limit are queued in `waitingGroups` and unblocked as slots free.
-- Tasks drain before pending messages (`drainGroup` priority).
-- `notifyIdle` + pending tasks triggers `closeStdin` immediately.
-- `sendMessage` writes to the IPC input directory and returns `true`; returns `false` when no active container or for task containers.
-- Retry with exponential backoff on failure; max-retry reached drops messages and resets count.
-- `shutdown` detaches containers without killing them.
-
-### Formatting and Routing
-
-**`src/formatting.test.ts`** — `src/router.ts`, `src/config.ts`, `src/types.ts`
-
-Tests `escapeXml` (all five XML special characters), `formatMessages` (XML envelope format, multi-sender, timestamp, sender name), `formatOutbound` (`<internal>` tag stripping), `stripInternalTags`, and `TRIGGER_PATTERN` matching.
-
-**`src/router-routing.test.ts`** — `src/router.ts`, `src/types.ts`
-
-Tests `findChannel` (returns the channel that owns a given JID, or undefined) and `ownsJid` delegation.
-
-**`src/routing.test.ts`** — `src/index.ts`, `src/db.ts`
-
-Tests `getAvailableGroups`: returns only group chats (filters DMs and `__group_sync__` sentinel), includes `isRegistered` flag correctly, ordered by last activity.
-
-### Platform and Windows
-
-**`setup/platform.test.ts`** — `setup/platform.ts`
-
-Sanity tests for `getServiceManager`, `commandExists` (real `node` binary exists; invented binary does not), and `getNodeVersion` format.
-
-**`setup/platform-windows.test.ts`** — `setup/platform.ts` (with `os.platform` mocked to `win32`)
-
-Tests all platform-detection functions under a simulated native Windows host: `getPlatform` returns `'windows'`; `getServiceManager` returns `'schtasks'`; `isWSL`/`hasSystemd` are false; `commandExists` uses `where` instead of `which`; `getNodePath` returns the correct path; `openBrowser` calls `start`.
-
-**`setup/environment.test.ts`** and **`setup/service.test.ts`** — setup helpers
-
-Verify environment variable collection and service file generation for each platform (launchd plist, systemd unit, schtasks XML).
-
-### Host Mode
-
-Covered by **`src/container-runner-host.test.ts`** described above under Runtime and Container.
-
----
-
-## Coverage Gap: `src/whatsapp-auth.ts`
-
-As described above, this file is exempt because it is an interactive setup script with no testable unit interface. Coverage is validated by the `/setup` skill's end-to-end flow.
+| Test File | Imports from Source |
+|-----------|---------------------|
+| `setup/environment.test.ts` | 0 files |
+| `setup/platform-windows.test.ts` | 1 files |
+| `setup/platform.test.ts` | 1 files |
+| `setup/service.test.ts` | 1 files |
+| `__tests__/apply.test.ts` | 2 files |
+| `__tests__/backup.test.ts` | 1 files |
+| `__tests__/ci-matrix.test.ts` | 2 files |
+| `__tests__/constants.test.ts` | 1 files |
+| `__tests__/customize.test.ts` | 3 files |
+| `__tests__/fetch-upstream.test.ts` | 0 files |
+| `__tests__/file-ops.test.ts` | 1 files |
+| `__tests__/fs-utils.test.ts` | 1 files |
+| `__tests__/lock.test.ts` | 2 files |
+| `__tests__/manifest.test.ts` | 2 files |
+| `__tests__/merge.test.ts` | 1 files |
+| `__tests__/path-remap.test.ts` | 2 files |
+| `__tests__/rebase.test.ts` | 1 files |
+| `__tests__/replay.test.ts` | 1 files |
+| `__tests__/resolution-cache.test.ts` | 1 files |
+| `__tests__/run-migrations.test.ts` | 0 files |
+| `__tests__/state.test.ts` | 1 files |
+| `__tests__/structured.test.ts` | 1 files |
+| `__tests__/uninstall.test.ts` | 1 files |
+| `__tests__/update-core-cli.test.ts` | 0 files |
+| `__tests__/update.test.ts` | 2 files |
+| `channels/whatsapp.test.ts` | 2 files |
+| `src/container-runner-host-e2e.test.ts` | 2 files |
+| `src/container-runner-host.test.ts` | 2 files |
+| `src/container-runner.test.ts` | 2 files |
+| `src/container-runtime.test.ts` | 2 files |
+| `src/db-accessors.test.ts` | 2 files |
+| `src/db.test.ts` | 1 files |
+| `src/env.test.ts` | 1 files |
+| `src/formatting.test.ts` | 3 files |
+| `src/fs-sync.test.ts` | 1 files |
+| `src/group-folder.test.ts` | 1 files |
+| `src/group-queue.test.ts` | 1 files |
+| `src/ipc-auth.test.ts` | 3 files |
+| `src/ipc-watcher.test.ts` | 3 files |
+| `src/mount-security.test.ts` | 2 files |
+| `src/router-routing.test.ts` | 2 files |
+| `src/routing.test.ts` | 2 files |
+| `src/task-scheduler-run.test.ts` | 5 files |
+| `src/task-scheduler.test.ts` | 2 files |

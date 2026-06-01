@@ -1,16 +1,60 @@
 {
   "metadata": {
-    "generatedAt": "2026-05-31T11:38:16.338Z",
-    "totalSourceFiles": 17,
-    "totalTestFiles": 18,
-    "testedCount": 16,
-    "untestedCount": 1,
-    "coveragePercent": "94.1"
+    "generatedAt": "2026-06-01T23:42:33.439Z",
+    "totalSourceFiles": 61,
+    "totalTestFiles": 44,
+    "testedCount": 37,
+    "untestedCount": 24,
+    "coveragePercent": "60.7"
   },
   "untestedFiles": [
-    "src/whatsapp-auth.ts"
+    "container/agent-runner/src/index.ts",
+    "container/agent-runner/src/ipc-mcp-stdio.ts",
+    "scripts/apply-skill.ts",
+    "scripts/post-update.ts",
+    "scripts/run-ci-tests.ts",
+    "scripts/run-migrations.ts",
+    "scripts/update-core.ts",
+    "setup/container.ts",
+    "setup/environment.ts",
+    "setup/groups.ts",
+    "setup/index.ts",
+    "setup/mounts.ts",
+    "setup/node-script.ts",
+    "setup/register.ts",
+    "setup/status.ts",
+    "setup/verify.ts",
+    "setup/whatsapp-auth.ts",
+    "skills-engine/git-utils.ts",
+    "skills-engine/index.ts",
+    "skills-engine/init.ts",
+    "skills-engine/migrate.ts",
+    "src/whatsapp-auth.ts",
+    "vitest.config.ts",
+    "vitest.skills.config.ts"
   ],
   "testedFiles": [
+    "scripts/generate-ci-matrix.ts",
+    "setup/platform.ts",
+    "setup/service.ts",
+    "skills-engine/apply.ts",
+    "skills-engine/backup.ts",
+    "skills-engine/constants.ts",
+    "skills-engine/customize.ts",
+    "skills-engine/file-ops.ts",
+    "skills-engine/fs-utils.ts",
+    "skills-engine/lock.ts",
+    "skills-engine/manifest.ts",
+    "skills-engine/merge.ts",
+    "skills-engine/path-remap.ts",
+    "skills-engine/rebase.ts",
+    "skills-engine/replay.ts",
+    "skills-engine/resolution-cache.ts",
+    "skills-engine/state.ts",
+    "skills-engine/structured.ts",
+    "skills-engine/types.ts",
+    "skills-engine/uninstall.ts",
+    "skills-engine/update.ts",
     "src/channels/whatsapp.ts",
     "src/config.ts",
     "src/container-runner.ts",
@@ -29,6 +73,98 @@
     "src/types.ts"
   ],
   "coverageMap": {
+    "container/agent-runner/src/index.ts": [],
+    "container/agent-runner/src/ipc-mcp-stdio.ts": [],
+    "scripts/apply-skill.ts": [],
+    "scripts/generate-ci-matrix.ts": [
+      "skills-engine/__tests__/ci-matrix.test.ts"
+    ],
+    "scripts/post-update.ts": [],
+    "scripts/run-ci-tests.ts": [],
+    "scripts/run-migrations.ts": [],
+    "scripts/update-core.ts": [],
+    "setup/container.ts": [],
+    "setup/environment.ts": [],
+    "setup/groups.ts": [],
+    "setup/index.ts": [],
+    "setup/mounts.ts": [],
+    "setup/node-script.ts": [],
+    "setup/platform.ts": [
+      "setup/platform-windows.test.ts",
+      "setup/platform.test.ts"
+    ],
+    "setup/register.ts": [],
+    "setup/service.ts": [
+      "setup/service.test.ts"
+    ],
+    "setup/status.ts": [],
+    "setup/verify.ts": [],
+    "setup/whatsapp-auth.ts": [],
+    "skills-engine/apply.ts": [
+      "skills-engine/__tests__/apply.test.ts"
+    ],
+    "skills-engine/backup.ts": [
+      "skills-engine/__tests__/backup.test.ts"
+    ],
+    "skills-engine/constants.ts": [
+      "skills-engine/__tests__/constants.test.ts",
+      "skills-engine/__tests__/customize.test.ts",
+      "skills-engine/__tests__/lock.test.ts"
+    ],
+    "skills-engine/customize.ts": [
+      "skills-engine/__tests__/customize.test.ts"
+    ],
+    "skills-engine/file-ops.ts": [
+      "skills-engine/__tests__/file-ops.test.ts"
+    ],
+    "skills-engine/fs-utils.ts": [
+      "skills-engine/__tests__/fs-utils.test.ts"
+    ],
+    "skills-engine/git-utils.ts": [],
+    "skills-engine/index.ts": [],
+    "skills-engine/init.ts": [],
+    "skills-engine/lock.ts": [
+      "skills-engine/__tests__/lock.test.ts"
+    ],
+    "skills-engine/manifest.ts": [
+      "skills-engine/__tests__/manifest.test.ts"
+    ],
+    "skills-engine/merge.ts": [
+      "skills-engine/__tests__/merge.test.ts"
+    ],
+    "skills-engine/migrate.ts": [],
+    "skills-engine/path-remap.ts": [
+      "skills-engine/__tests__/path-remap.test.ts"
+    ],
+    "skills-engine/rebase.ts": [
+      "skills-engine/__tests__/rebase.test.ts"
+    ],
+    "skills-engine/replay.ts": [
+      "skills-engine/__tests__/replay.test.ts"
+    ],
+    "skills-engine/resolution-cache.ts": [
+      "skills-engine/__tests__/resolution-cache.test.ts"
+    ],
+    "skills-engine/state.ts": [
+      "skills-engine/__tests__/apply.test.ts",
+      "skills-engine/__tests__/customize.test.ts",
+      "skills-engine/__tests__/manifest.test.ts",
+      "skills-engine/__tests__/path-remap.test.ts",
+      "skills-engine/__tests__/state.test.ts",
+      "skills-engine/__tests__/update.test.ts"
+    ],
+    "skills-engine/structured.ts": [
+      "skills-engine/__tests__/structured.test.ts"
+    ],
+    "skills-engine/types.ts": [
+      "skills-engine/__tests__/ci-matrix.test.ts"
+    ],
+    "skills-engine/uninstall.ts": [
+      "skills-engine/__tests__/uninstall.test.ts"
+    ],
+    "skills-engine/update.ts": [
+      "skills-engine/__tests__/update.test.ts"
+    ],
     "src/channels/whatsapp.ts": [
       "src/channels/whatsapp.test.ts"
     ],
@@ -36,8 +172,10 @@
       "src/formatting.test.ts"
     ],
     "src/container-runner.ts": [
+      "src/container-runner-host-e2e.test.ts",
       "src/container-runner-host.test.ts",
-      "src/container-runner.test.ts"
+      "src/container-runner.test.ts",
+      "src/task-scheduler-run.test.ts"
     ],
     "src/container-runtime.ts": [
       "src/container-runtime.test.ts"
@@ -59,7 +197,8 @@
       "src/fs-sync.test.ts"
     ],
     "src/group-folder.ts": [
-      "src/group-folder.test.ts"
+      "src/group-folder.test.ts",
+      "src/task-scheduler-run.test.ts"
     ],
     "src/group-queue.ts": [
       "src/group-queue.test.ts"
@@ -86,6 +225,7 @@
       "src/task-scheduler.test.ts"
     ],
     "src/types.ts": [
+      "src/container-runner-host-e2e.test.ts",
       "src/container-runner-host.test.ts",
       "src/container-runner.test.ts",
       "src/db-accessors.test.ts",
@@ -96,12 +236,93 @@
       "src/router-routing.test.ts",
       "src/task-scheduler-run.test.ts"
     ],
-    "src/whatsapp-auth.ts": []
+    "src/whatsapp-auth.ts": [],
+    "vitest.config.ts": [],
+    "vitest.skills.config.ts": []
   },
   "testToSourceMap": {
+    "setup/environment.test.ts": [],
+    "setup/platform-windows.test.ts": [
+      "setup/platform.ts"
+    ],
+    "setup/platform.test.ts": [
+      "setup/platform.ts"
+    ],
+    "setup/service.test.ts": [
+      "setup/service.ts"
+    ],
+    "skills-engine/__tests__/apply.test.ts": [
+      "skills-engine/apply.ts",
+      "skills-engine/state.ts"
+    ],
+    "skills-engine/__tests__/backup.test.ts": [
+      "skills-engine/backup.ts"
+    ],
+    "skills-engine/__tests__/ci-matrix.test.ts": [
+      "scripts/generate-ci-matrix.ts",
+      "skills-engine/types.ts"
+    ],
+    "skills-engine/__tests__/constants.test.ts": [
+      "skills-engine/constants.ts"
+    ],
+    "skills-engine/__tests__/customize.test.ts": [
+      "skills-engine/customize.ts",
+      "skills-engine/constants.ts",
+      "skills-engine/state.ts"
+    ],
+    "skills-engine/__tests__/fetch-upstream.test.ts": [],
+    "skills-engine/__tests__/file-ops.test.ts": [
+      "skills-engine/file-ops.ts"
+    ],
+    "skills-engine/__tests__/fs-utils.test.ts": [
+      "skills-engine/fs-utils.ts"
+    ],
+    "skills-engine/__tests__/lock.test.ts": [
+      "skills-engine/lock.ts",
+      "skills-engine/constants.ts"
+    ],
+    "skills-engine/__tests__/manifest.test.ts": [
+      "skills-engine/manifest.ts",
+      "skills-engine/state.ts"
+    ],
+    "skills-engine/__tests__/merge.test.ts": [
+      "skills-engine/merge.ts"
+    ],
+    "skills-engine/__tests__/path-remap.test.ts": [
+      "skills-engine/path-remap.ts",
+      "skills-engine/state.ts"
+    ],
+    "skills-engine/__tests__/rebase.test.ts": [
+      "skills-engine/rebase.ts"
+    ],
+    "skills-engine/__tests__/replay.test.ts": [
+      "skills-engine/replay.ts"
+    ],
+    "skills-engine/__tests__/resolution-cache.test.ts": [
+      "skills-engine/resolution-cache.ts"
+    ],
+    "skills-engine/__tests__/run-migrations.test.ts": [],
+    "skills-engine/__tests__/state.test.ts": [
+      "skills-engine/state.ts"
+    ],
+    "skills-engine/__tests__/structured.test.ts": [
+      "skills-engine/structured.ts"
+    ],
+    "skills-engine/__tests__/uninstall.test.ts": [
+      "skills-engine/uninstall.ts"
+    ],
+    "skills-engine/__tests__/update-core-cli.test.ts": [],
+    "skills-engine/__tests__/update.test.ts": [
+      "skills-engine/update.ts",
+      "skills-engine/state.ts"
+    ],
     "src/channels/whatsapp.test.ts": [
       "src/channels/whatsapp.ts",
       "src/db.ts"
+    ],
+    "src/container-runner-host-e2e.test.ts": [
+      "src/container-runner.ts",
+      "src/types.ts"
     ],
     "src/container-runner-host.test.ts": [
       "src/container-runner.ts",
@@ -164,7 +385,9 @@
     "src/task-scheduler-run.test.ts": [
       "src/db.ts",
       "src/types.ts",
-      "src/task-scheduler.ts"
+      "src/task-scheduler.ts",
+      "src/group-folder.ts",
+      "src/container-runner.ts"
     ],
     "src/task-scheduler.test.ts": [
       "src/db.ts",

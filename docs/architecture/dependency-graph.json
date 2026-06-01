@@ -2,20 +2,2621 @@
   "metadata": {
     "name": "nanoclaw",
     "version": "1.1.0",
-    "lastUpdated": "2026-05-31",
-    "totalFiles": 17,
-    "totalModules": 3,
-    "totalExports": 85
+    "lastUpdated": "2026-06-01",
+    "totalFiles": 61,
+    "totalModules": 7,
+    "totalExports": 240
   },
   "entryPoints": [
+    {
+      "file": "scripts/apply-skill.ts",
+      "type": "cli",
+      "description": "Entry Point"
+    },
+    {
+      "file": "scripts/generate-ci-matrix.ts",
+      "type": "cli",
+      "description": "Extract overlap-relevant info from a parsed manifest."
+    },
+    {
+      "file": "scripts/post-update.ts",
+      "type": "cli",
+      "description": "Entry Point"
+    },
+    {
+      "file": "scripts/run-ci-tests.ts",
+      "type": "cli",
+      "description": "--- Main ---"
+    },
+    {
+      "file": "scripts/run-migrations.ts",
+      "type": "cli",
+      "description": "Resolve tsx's ESM loader once so each migration runs under TypeScript on any"
+    },
+    {
+      "file": "scripts/update-core.ts",
+      "type": "cli",
+      "description": "Preview"
+    },
+    {
+      "file": "setup/index.ts",
+      "type": "main",
+      "description": "Setup CLI entry point."
+    },
+    {
+      "file": "skills-engine/index.ts",
+      "type": "main",
+      "description": "Entry Point"
+    },
     {
       "file": "src/index.ts",
       "type": "main",
       "description": "Get available groups list for the agent."
+    },
+    {
+      "file": "src/whatsapp-auth.ts",
+      "type": "main",
+      "description": "WhatsApp Authentication Script"
+    },
+    {
+      "file": "vitest.config.ts",
+      "type": "main",
+      "description": "Entry Point"
+    },
+    {
+      "file": "vitest.skills.config.ts",
+      "type": "main",
+      "description": "Entry Point"
     }
   ],
   "modules": {
-    "channels": {
+    "container/agent-runner/src": {
+      "container/agent-runner/src/index.ts": {
+        "description": "NanoClaw Agent Runner",
+        "externalDependencies": [
+          {
+            "package": "@anthropic-ai/claude-agent-sdk",
+            "imports": [
+              "query",
+              "HookCallback",
+              "PreCompactHookInput",
+              "PreToolUseHookInput"
+            ]
+          }
+        ],
+        "nodeDependencies": [
+          {
+            "module": "fs",
+            "imports": [
+              "fs"
+            ]
+          },
+          {
+            "module": "path",
+            "imports": [
+              "path"
+            ]
+          },
+          {
+            "module": "url",
+            "imports": [
+              "fileURLToPath"
+            ]
+          }
+        ],
+        "internalDependencies": [],
+        "exports": []
+      },
+      "container/agent-runner/src/ipc-mcp-stdio.ts": {
+        "description": "Stdio MCP Server for NanoClaw",
+        "externalDependencies": [
+          {
+            "package": "@modelcontextprotocol/sdk/server/mcp.js",
+            "imports": [
+              "McpServer"
+            ]
+          },
+          {
+            "package": "@modelcontextprotocol/sdk/server/stdio.js",
+            "imports": [
+              "StdioServerTransport"
+            ]
+          },
+          {
+            "package": "zod",
+            "imports": [
+              "z"
+            ]
+          },
+          {
+            "package": "cron-parser",
+            "imports": [
+              "CronExpressionParser"
+            ]
+          }
+        ],
+        "nodeDependencies": [
+          {
+            "module": "fs",
+            "imports": [
+              "fs"
+            ]
+          },
+          {
+            "module": "path",
+            "imports": [
+              "path"
+            ]
+          }
+        ],
+        "internalDependencies": [],
+        "exports": []
+      }
+    },
+    "scripts": {
+      "scripts/apply-skill.ts": {
+        "description": "apply-skill module",
+        "externalDependencies": [],
+        "nodeDependencies": [],
+        "internalDependencies": [
+          {
+            "file": "../skills-engine/apply.js",
+            "imports": [
+              "applySkill"
+            ]
+          }
+        ],
+        "exports": []
+      },
+      "scripts/generate-ci-matrix.ts": {
+        "description": "Extract overlap-relevant info from a parsed manifest.",
+        "externalDependencies": [
+          {
+            "package": "yaml",
+            "imports": [
+              "parse"
+            ]
+          }
+        ],
+        "nodeDependencies": [
+          {
+            "module": "fs",
+            "imports": [
+              "fs"
+            ]
+          },
+          {
+            "module": "path",
+            "imports": [
+              "path"
+            ]
+          }
+        ],
+        "internalDependencies": [
+          {
+            "file": "../skills-engine/types.js",
+            "imports": [
+              "SkillManifest"
+            ]
+          }
+        ],
+        "exports": [
+          "extractOverlapInfo",
+          "computeOverlapMatrix",
+          "readAllManifests",
+          "generateMatrix"
+        ],
+        "interfaces": [
+          "MatrixEntry",
+          "SkillOverlapInfo"
+        ],
+        "functions": [
+          "extractOverlapInfo",
+          "computeOverlapMatrix",
+          "readAllManifests",
+          "generateMatrix"
+        ]
+      },
+      "scripts/post-update.ts": {
+        "description": "post-update module",
+        "externalDependencies": [],
+        "nodeDependencies": [],
+        "internalDependencies": [
+          {
+            "file": "../skills-engine/backup.js",
+            "imports": [
+              "clearBackup"
+            ]
+          }
+        ],
+        "exports": []
+      },
+      "scripts/run-ci-tests.ts": {
+        "description": "--- Main ---",
+        "externalDependencies": [],
+        "nodeDependencies": [
+          {
+            "module": "child_process",
+            "imports": [
+              "execSync"
+            ]
+          },
+          {
+            "module": "fs",
+            "imports": [
+              "fs"
+            ]
+          },
+          {
+            "module": "os",
+            "imports": [
+              "os"
+            ]
+          },
+          {
+            "module": "path",
+            "imports": [
+              "path"
+            ]
+          }
+        ],
+        "internalDependencies": [
+          {
+            "file": "./generate-ci-matrix.js",
+            "imports": [
+              "generateMatrix",
+              "MatrixEntry"
+            ]
+          },
+          {
+            "file": "../skills-engine/fs-utils.js",
+            "imports": [
+              "copyDir"
+            ]
+          }
+        ],
+        "exports": []
+      },
+      "scripts/run-migrations.ts": {
+        "description": "Resolve tsx's ESM loader once so each migration runs under TypeScript on any",
+        "externalDependencies": [],
+        "nodeDependencies": [
+          {
+            "module": "child_process",
+            "imports": [
+              "execFileSync"
+            ]
+          },
+          {
+            "module": "fs",
+            "imports": [
+              "fs"
+            ]
+          },
+          {
+            "module": "module",
+            "imports": [
+              "createRequire"
+            ]
+          },
+          {
+            "module": "path",
+            "imports": [
+              "path"
+            ]
+          },
+          {
+            "module": "url",
+            "imports": [
+              "pathToFileURL"
+            ]
+          }
+        ],
+        "internalDependencies": [
+          {
+            "file": "../skills-engine/state.js",
+            "imports": [
+              "compareSemver"
+            ]
+          }
+        ],
+        "exports": []
+      },
+      "scripts/update-core.ts": {
+        "description": "Preview",
+        "externalDependencies": [],
+        "nodeDependencies": [],
+        "internalDependencies": [
+          {
+            "file": "../skills-engine/update.js",
+            "imports": [
+              "applyUpdate",
+              "previewUpdate"
+            ]
+          }
+        ],
+        "exports": []
+      }
+    },
+    "setup": {
+      "setup/container.ts": {
+        "description": "Step: container — Build container image and verify with test run.",
+        "externalDependencies": [],
+        "nodeDependencies": [
+          {
+            "module": "child_process",
+            "imports": [
+              "execSync"
+            ]
+          },
+          {
+            "module": "path",
+            "imports": [
+              "path"
+            ]
+          }
+        ],
+        "internalDependencies": [
+          {
+            "file": "../src/logger.js",
+            "imports": [
+              "logger"
+            ]
+          },
+          {
+            "file": "./platform.js",
+            "imports": [
+              "commandExists"
+            ]
+          },
+          {
+            "file": "./status.js",
+            "imports": [
+              "emitStatus"
+            ]
+          }
+        ],
+        "exports": [
+          "run"
+        ],
+        "functions": [
+          "run"
+        ]
+      },
+      "setup/environment.ts": {
+        "description": "Step: environment — Detect OS, Node, container runtimes, existing config.",
+        "externalDependencies": [
+          {
+            "package": "better-sqlite3",
+            "imports": [
+              "Database"
+            ]
+          }
+        ],
+        "nodeDependencies": [
+          {
+            "module": "fs",
+            "imports": [
+              "fs"
+            ]
+          },
+          {
+            "module": "path",
+            "imports": [
+              "path"
+            ]
+          }
+        ],
+        "internalDependencies": [
+          {
+            "file": "../src/config.js",
+            "imports": [
+              "STORE_DIR"
+            ]
+          },
+          {
+            "file": "../src/logger.js",
+            "imports": [
+              "logger"
+            ]
+          },
+          {
+            "file": "./platform.js",
+            "imports": [
+              "commandExists",
+              "getPlatform",
+              "isHeadless",
+              "isWSL"
+            ]
+          },
+          {
+            "file": "./status.js",
+            "imports": [
+              "emitStatus"
+            ]
+          },
+          {
+            "file": "../src/env.js",
+            "imports": [
+              "(dynamic)"
+            ]
+          }
+        ],
+        "exports": [
+          "run"
+        ],
+        "functions": [
+          "run"
+        ]
+      },
+      "setup/groups.ts": {
+        "description": "Step: groups — Connect to WhatsApp, fetch group metadata, write to DB.",
+        "externalDependencies": [
+          {
+            "package": "better-sqlite3",
+            "imports": [
+              "Database"
+            ]
+          },
+          {
+            "package": "@whiskeysockets/baileys",
+            "imports": [
+              "useMultiFileAuthState",
+              "makeCacheableSignalKeyStore",
+              "Browsers",
+              "makeWASocket"
+            ]
+          },
+          {
+            "package": "pino",
+            "imports": [
+              "pino"
+            ]
+          },
+          {
+            "package": "better-sqlite3",
+            "imports": [
+              "Database"
+            ]
+          }
+        ],
+        "nodeDependencies": [
+          {
+            "module": "child_process",
+            "imports": [
+              "execSync"
+            ]
+          },
+          {
+            "module": "fs",
+            "imports": [
+              "fs"
+            ]
+          },
+          {
+            "module": "path",
+            "imports": [
+              "path"
+            ]
+          },
+          {
+            "module": "path",
+            "imports": [
+              "path"
+            ]
+          },
+          {
+            "module": "fs",
+            "imports": [
+              "fs"
+            ]
+          }
+        ],
+        "internalDependencies": [
+          {
+            "file": "../src/config.js",
+            "imports": [
+              "STORE_DIR"
+            ]
+          },
+          {
+            "file": "../src/logger.js",
+            "imports": [
+              "logger"
+            ]
+          },
+          {
+            "file": "./node-script.js",
+            "imports": [
+              "runNodeScript"
+            ]
+          },
+          {
+            "file": "./status.js",
+            "imports": [
+              "emitStatus"
+            ]
+          }
+        ],
+        "exports": [
+          "run"
+        ],
+        "functions": [
+          "run"
+        ]
+      },
+      "setup/index.ts": {
+        "description": "Setup CLI entry point.",
+        "externalDependencies": [],
+        "nodeDependencies": [],
+        "internalDependencies": [
+          {
+            "file": "../src/logger.js",
+            "imports": [
+              "logger"
+            ]
+          },
+          {
+            "file": "./status.js",
+            "imports": [
+              "emitStatus"
+            ]
+          },
+          {
+            "file": "./environment.js",
+            "imports": [
+              "(dynamic)"
+            ]
+          },
+          {
+            "file": "./container.js",
+            "imports": [
+              "(dynamic)"
+            ]
+          },
+          {
+            "file": "./whatsapp-auth.js",
+            "imports": [
+              "(dynamic)"
+            ]
+          },
+          {
+            "file": "./groups.js",
+            "imports": [
+              "(dynamic)"
+            ]
+          },
+          {
+            "file": "./register.js",
+            "imports": [
+              "(dynamic)"
+            ]
+          },
+          {
+            "file": "./mounts.js",
+            "imports": [
+              "(dynamic)"
+            ]
+          },
+          {
+            "file": "./service.js",
+            "imports": [
+              "(dynamic)"
+            ]
+          },
+          {
+            "file": "./verify.js",
+            "imports": [
+              "(dynamic)"
+            ]
+          }
+        ],
+        "exports": []
+      },
+      "setup/mounts.ts": {
+        "description": "Step: mounts — Write mount allowlist config file.",
+        "externalDependencies": [],
+        "nodeDependencies": [
+          {
+            "module": "fs",
+            "imports": [
+              "fs"
+            ]
+          },
+          {
+            "module": "path",
+            "imports": [
+              "path"
+            ]
+          },
+          {
+            "module": "os",
+            "imports": [
+              "os"
+            ]
+          }
+        ],
+        "internalDependencies": [
+          {
+            "file": "../src/logger.js",
+            "imports": [
+              "logger"
+            ]
+          },
+          {
+            "file": "./platform.js",
+            "imports": [
+              "isRoot"
+            ]
+          },
+          {
+            "file": "./status.js",
+            "imports": [
+              "emitStatus"
+            ]
+          }
+        ],
+        "exports": [
+          "run"
+        ],
+        "functions": [
+          "run"
+        ]
+      },
+      "setup/node-script.ts": {
+        "description": "Shared helpers for running Node.js scripts from setup steps in a",
+        "externalDependencies": [],
+        "nodeDependencies": [
+          {
+            "module": "child_process",
+            "imports": [
+              "execFileSync"
+            ]
+          },
+          {
+            "module": "fs",
+            "imports": [
+              "fs"
+            ]
+          },
+          {
+            "module": "path",
+            "imports": [
+              "path"
+            ]
+          }
+        ],
+        "internalDependencies": [],
+        "exports": [
+          "runNodeScript"
+        ],
+        "functions": [
+          "runNodeScript"
+        ]
+      },
+      "setup/platform.ts": {
+        "description": "Cross-platform detection utilities for NanoClaw setup.",
+        "externalDependencies": [],
+        "nodeDependencies": [
+          {
+            "module": "child_process",
+            "imports": [
+              "execSync"
+            ]
+          },
+          {
+            "module": "fs",
+            "imports": [
+              "fs"
+            ]
+          },
+          {
+            "module": "os",
+            "imports": [
+              "os"
+            ]
+          }
+        ],
+        "internalDependencies": [],
+        "exports": [
+          "getPlatform",
+          "isWindows",
+          "isWSL",
+          "isRoot",
+          "isHeadless",
+          "hasSystemd",
+          "openBrowser",
+          "getServiceManager",
+          "getNodePath",
+          "commandExists",
+          "getNodeVersion",
+          "getNodeMajorVersion"
+        ],
+        "functions": [
+          "getPlatform",
+          "isWindows",
+          "isWSL",
+          "isRoot",
+          "isHeadless",
+          "hasSystemd",
+          "openBrowser",
+          "getServiceManager",
+          "getNodePath",
+          "commandExists",
+          "getNodeVersion",
+          "getNodeMajorVersion"
+        ]
+      },
+      "setup/register.ts": {
+        "description": "Step: register — Write channel registration config, create group folders.",
+        "externalDependencies": [],
+        "nodeDependencies": [
+          {
+            "module": "fs",
+            "imports": [
+              "fs"
+            ]
+          },
+          {
+            "module": "path",
+            "imports": [
+              "path"
+            ]
+          }
+        ],
+        "internalDependencies": [
+          {
+            "file": "../src/db.js",
+            "imports": [
+              "initDatabase",
+              "setRegisteredGroup"
+            ]
+          },
+          {
+            "file": "../src/group-folder.js",
+            "imports": [
+              "isValidGroupFolder"
+            ]
+          },
+          {
+            "file": "../src/logger.js",
+            "imports": [
+              "logger"
+            ]
+          },
+          {
+            "file": "./status.js",
+            "imports": [
+              "emitStatus"
+            ]
+          }
+        ],
+        "exports": [
+          "run"
+        ],
+        "functions": [
+          "run"
+        ]
+      },
+      "setup/service.ts": {
+        "description": "Step: service — Generate and load service manager config.",
+        "externalDependencies": [],
+        "nodeDependencies": [
+          {
+            "module": "child_process",
+            "imports": [
+              "execFileSync",
+              "execSync"
+            ]
+          },
+          {
+            "module": "fs",
+            "imports": [
+              "fs"
+            ]
+          },
+          {
+            "module": "os",
+            "imports": [
+              "os"
+            ]
+          },
+          {
+            "module": "path",
+            "imports": [
+              "path"
+            ]
+          }
+        ],
+        "internalDependencies": [
+          {
+            "file": "../src/logger.js",
+            "imports": [
+              "logger"
+            ]
+          },
+          {
+            "file": "./platform.js",
+            "imports": [
+              "getPlatform",
+              "getNodePath",
+              "getServiceManager",
+              "isRoot"
+            ]
+          },
+          {
+            "file": "./status.js",
+            "imports": [
+              "emitStatus"
+            ]
+          }
+        ],
+        "exports": [
+          "WINDOWS_TASK_NAME",
+          "run",
+          "generateWindowsLauncher",
+          "windowsScheduledTaskArgs"
+        ],
+        "functions": [
+          "run",
+          "generateWindowsLauncher",
+          "windowsScheduledTaskArgs"
+        ],
+        "constants": [
+          "WINDOWS_TASK_NAME"
+        ]
+      },
+      "setup/status.ts": {
+        "description": "Structured status block output for setup steps.",
+        "externalDependencies": [],
+        "nodeDependencies": [],
+        "internalDependencies": [],
+        "exports": [
+          "emitStatus"
+        ],
+        "functions": [
+          "emitStatus"
+        ]
+      },
+      "setup/verify.ts": {
+        "description": "Step: verify — End-to-end health check of the full installation.",
+        "externalDependencies": [
+          {
+            "package": "better-sqlite3",
+            "imports": [
+              "Database"
+            ]
+          }
+        ],
+        "nodeDependencies": [
+          {
+            "module": "child_process",
+            "imports": [
+              "execSync"
+            ]
+          },
+          {
+            "module": "fs",
+            "imports": [
+              "fs"
+            ]
+          },
+          {
+            "module": "os",
+            "imports": [
+              "os"
+            ]
+          },
+          {
+            "module": "path",
+            "imports": [
+              "path"
+            ]
+          }
+        ],
+        "internalDependencies": [
+          {
+            "file": "../src/config.js",
+            "imports": [
+              "STORE_DIR"
+            ]
+          },
+          {
+            "file": "../src/logger.js",
+            "imports": [
+              "logger"
+            ]
+          },
+          {
+            "file": "./platform.js",
+            "imports": [
+              "commandExists",
+              "getServiceManager",
+              "isRoot"
+            ]
+          },
+          {
+            "file": "./status.js",
+            "imports": [
+              "emitStatus"
+            ]
+          }
+        ],
+        "exports": [
+          "run"
+        ],
+        "functions": [
+          "run"
+        ]
+      },
+      "setup/whatsapp-auth.ts": {
+        "description": "Step: whatsapp-auth — Full WhatsApp auth flow with polling.",
+        "externalDependencies": [
+          {
+            "package": "qrcode",
+            "imports": [
+              "QR"
+            ]
+          }
+        ],
+        "nodeDependencies": [
+          {
+            "module": "child_process",
+            "imports": [
+              "spawn"
+            ]
+          },
+          {
+            "module": "fs",
+            "imports": [
+              "fs"
+            ]
+          },
+          {
+            "module": "path",
+            "imports": [
+              "path"
+            ]
+          },
+          {
+            "module": "fs",
+            "imports": [
+              "fs"
+            ]
+          }
+        ],
+        "internalDependencies": [
+          {
+            "file": "../src/logger.js",
+            "imports": [
+              "logger"
+            ]
+          },
+          {
+            "file": "./node-script.js",
+            "imports": [
+              "runNodeScript"
+            ]
+          },
+          {
+            "file": "./platform.js",
+            "imports": [
+              "openBrowser",
+              "isHeadless"
+            ]
+          },
+          {
+            "file": "./status.js",
+            "imports": [
+              "emitStatus"
+            ]
+          }
+        ],
+        "exports": [
+          "run"
+        ],
+        "functions": [
+          "run"
+        ]
+      }
+    },
+    "skills-engine": {
+      "skills-engine/apply.ts": {
+        "description": "apply module",
+        "externalDependencies": [],
+        "nodeDependencies": [
+          {
+            "module": "child_process",
+            "imports": [
+              "execFileSync",
+              "execSync"
+            ]
+          },
+          {
+            "module": "crypto",
+            "imports": [
+              "crypto"
+            ]
+          },
+          {
+            "module": "fs",
+            "imports": [
+              "fs"
+            ]
+          },
+          {
+            "module": "os",
+            "imports": [
+              "os"
+            ]
+          },
+          {
+            "module": "path",
+            "imports": [
+              "path"
+            ]
+          }
+        ],
+        "internalDependencies": [
+          {
+            "file": "./backup.js",
+            "imports": [
+              "clearBackup",
+              "createBackup",
+              "restoreBackup"
+            ]
+          },
+          {
+            "file": "./constants.js",
+            "imports": [
+              "NANOCLAW_DIR"
+            ]
+          },
+          {
+            "file": "./fs-utils.js",
+            "imports": [
+              "copyDir"
+            ]
+          },
+          {
+            "file": "./customize.js",
+            "imports": [
+              "isCustomizeActive"
+            ]
+          },
+          {
+            "file": "./file-ops.js",
+            "imports": [
+              "executeFileOps"
+            ]
+          },
+          {
+            "file": "./lock.js",
+            "imports": [
+              "acquireLock"
+            ]
+          },
+          {
+            "file": "./manifest.js",
+            "imports": [
+              "checkConflicts",
+              "checkCoreVersion",
+              "checkDependencies",
+              "checkSystemVersion",
+              "readManifest"
+            ]
+          },
+          {
+            "file": "./path-remap.js",
+            "imports": [
+              "loadPathRemap",
+              "resolvePathRemap"
+            ]
+          },
+          {
+            "file": "./merge.js",
+            "imports": [
+              "cleanupMergeState",
+              "isGitRepo",
+              "mergeFile",
+              "runRerere",
+              "setupRerereAdapter"
+            ]
+          },
+          {
+            "file": "./resolution-cache.js",
+            "imports": [
+              "loadResolutions"
+            ]
+          },
+          {
+            "file": "./state.js",
+            "imports": [
+              "computeFileHash",
+              "readState",
+              "recordSkillApplication",
+              "writeState"
+            ]
+          },
+          {
+            "file": "./structured.js",
+            "imports": [
+              "mergeDockerComposeServices",
+              "mergeEnvAdditions",
+              "mergeNpmDependencies",
+              "runNpmInstall"
+            ]
+          },
+          {
+            "file": "./types.js",
+            "imports": [
+              "ApplyResult"
+            ]
+          }
+        ],
+        "exports": [
+          "applySkill"
+        ],
+        "functions": [
+          "applySkill"
+        ]
+      },
+      "skills-engine/backup.ts": {
+        "description": "backup module",
+        "externalDependencies": [],
+        "nodeDependencies": [
+          {
+            "module": "fs",
+            "imports": [
+              "fs"
+            ]
+          },
+          {
+            "module": "path",
+            "imports": [
+              "path"
+            ]
+          }
+        ],
+        "internalDependencies": [
+          {
+            "file": "./constants.js",
+            "imports": [
+              "BACKUP_DIR"
+            ]
+          }
+        ],
+        "exports": [
+          "createBackup",
+          "restoreBackup",
+          "clearBackup"
+        ],
+        "functions": [
+          "createBackup",
+          "restoreBackup",
+          "clearBackup"
+        ]
+      },
+      "skills-engine/constants.ts": {
+        "description": "Top-level paths to include in base snapshot and upstream extraction.",
+        "externalDependencies": [],
+        "nodeDependencies": [],
+        "internalDependencies": [],
+        "exports": [
+          "NANOCLAW_DIR",
+          "STATE_FILE",
+          "BASE_DIR",
+          "BACKUP_DIR",
+          "LOCK_FILE",
+          "CUSTOM_DIR",
+          "RESOLUTIONS_DIR",
+          "SHIPPED_RESOLUTIONS_DIR",
+          "SKILLS_SCHEMA_VERSION",
+          "BASE_INCLUDES",
+          "BASE_EXCLUDES"
+        ],
+        "constants": [
+          "NANOCLAW_DIR",
+          "STATE_FILE",
+          "BASE_DIR",
+          "BACKUP_DIR",
+          "LOCK_FILE",
+          "CUSTOM_DIR",
+          "RESOLUTIONS_DIR",
+          "SHIPPED_RESOLUTIONS_DIR",
+          "SKILLS_SCHEMA_VERSION",
+          "BASE_INCLUDES",
+          "BASE_EXCLUDES"
+        ]
+      },
+      "skills-engine/customize.ts": {
+        "description": "customize module",
+        "externalDependencies": [
+          {
+            "package": "yaml",
+            "imports": [
+              "parse",
+              "stringify"
+            ]
+          }
+        ],
+        "nodeDependencies": [
+          {
+            "module": "fs",
+            "imports": [
+              "fs"
+            ]
+          },
+          {
+            "module": "path",
+            "imports": [
+              "path"
+            ]
+          }
+        ],
+        "internalDependencies": [
+          {
+            "file": "./constants.js",
+            "imports": [
+              "BASE_DIR",
+              "CUSTOM_DIR"
+            ]
+          },
+          {
+            "file": "./git-utils.js",
+            "imports": [
+              "gitDiffNoIndex"
+            ]
+          },
+          {
+            "file": "./state.js",
+            "imports": [
+              "computeFileHash",
+              "readState",
+              "recordCustomModification"
+            ]
+          }
+        ],
+        "exports": [
+          "isCustomizeActive",
+          "startCustomize",
+          "commitCustomize",
+          "abortCustomize"
+        ],
+        "functions": [
+          "isCustomizeActive",
+          "startCustomize",
+          "commitCustomize",
+          "abortCustomize"
+        ]
+      },
+      "skills-engine/file-ops.ts": {
+        "description": "file-ops module",
+        "externalDependencies": [],
+        "nodeDependencies": [
+          {
+            "module": "fs",
+            "imports": [
+              "fs"
+            ]
+          },
+          {
+            "module": "path",
+            "imports": [
+              "path"
+            ]
+          }
+        ],
+        "internalDependencies": [
+          {
+            "file": "./types.js",
+            "imports": [
+              "FileOperation",
+              "FileOpsResult"
+            ],
+            "typeOnly": true
+          }
+        ],
+        "exports": [
+          "executeFileOps"
+        ],
+        "functions": [
+          "executeFileOps"
+        ]
+      },
+      "skills-engine/fs-utils.ts": {
+        "description": "Normalize a path to POSIX (forward-slash) separators.",
+        "externalDependencies": [],
+        "nodeDependencies": [
+          {
+            "module": "fs",
+            "imports": [
+              "fs"
+            ]
+          },
+          {
+            "module": "path",
+            "imports": [
+              "path"
+            ]
+          }
+        ],
+        "internalDependencies": [],
+        "exports": [
+          "toPosix",
+          "copyDir"
+        ],
+        "functions": [
+          "toPosix",
+          "copyDir"
+        ]
+      },
+      "skills-engine/git-utils.ts": {
+        "description": "Run `git diff --no-index` on the given path arguments (resolved relative to",
+        "externalDependencies": [],
+        "nodeDependencies": [
+          {
+            "module": "child_process",
+            "imports": [
+              "execFileSync"
+            ]
+          }
+        ],
+        "internalDependencies": [],
+        "exports": [
+          "gitDiffNoIndex"
+        ],
+        "functions": [
+          "gitDiffNoIndex"
+        ]
+      },
+      "skills-engine/index.ts": {
+        "description": "index module",
+        "externalDependencies": [],
+        "nodeDependencies": [],
+        "internalDependencies": [
+          {
+            "file": "./apply.js",
+            "imports": [
+              "applySkill"
+            ],
+            "reExport": true
+          },
+          {
+            "file": "./backup.js",
+            "imports": [
+              "clearBackup",
+              "createBackup",
+              "restoreBackup"
+            ],
+            "reExport": true
+          },
+          {
+            "file": "./constants.js",
+            "imports": [
+              "BACKUP_DIR",
+              "BASE_DIR",
+              "SKILLS_SCHEMA_VERSION",
+              "CUSTOM_DIR",
+              "LOCK_FILE",
+              "NANOCLAW_DIR",
+              "RESOLUTIONS_DIR",
+              "SHIPPED_RESOLUTIONS_DIR",
+              "STATE_FILE"
+            ],
+            "reExport": true
+          },
+          {
+            "file": "./customize.js",
+            "imports": [
+              "abortCustomize",
+              "commitCustomize",
+              "isCustomizeActive",
+              "startCustomize"
+            ],
+            "reExport": true
+          },
+          {
+            "file": "./file-ops.js",
+            "imports": [
+              "executeFileOps"
+            ],
+            "reExport": true
+          },
+          {
+            "file": "./init.js",
+            "imports": [
+              "initNanoclawDir"
+            ],
+            "reExport": true
+          },
+          {
+            "file": "./lock.js",
+            "imports": [
+              "acquireLock",
+              "isLocked",
+              "releaseLock"
+            ],
+            "reExport": true
+          },
+          {
+            "file": "./manifest.js",
+            "imports": [
+              "checkConflicts",
+              "checkCoreVersion",
+              "checkDependencies",
+              "checkSystemVersion",
+              "readManifest"
+            ],
+            "reExport": true
+          },
+          {
+            "file": "./merge.js",
+            "imports": [
+              "cleanupMergeState",
+              "isGitRepo",
+              "mergeFile",
+              "runRerere",
+              "setupRerereAdapter"
+            ],
+            "reExport": true
+          },
+          {
+            "file": "./path-remap.js",
+            "imports": [
+              "loadPathRemap",
+              "recordPathRemap",
+              "resolvePathRemap"
+            ],
+            "reExport": true
+          },
+          {
+            "file": "./rebase.js",
+            "imports": [
+              "rebase"
+            ],
+            "reExport": true
+          },
+          {
+            "file": "./replay.js",
+            "imports": [
+              "findSkillDir",
+              "replaySkills"
+            ],
+            "reExport": true
+          },
+          {
+            "file": "./uninstall.js",
+            "imports": [
+              "uninstallSkill"
+            ],
+            "reExport": true
+          },
+          {
+            "file": "./migrate.js",
+            "imports": [
+              "initSkillsSystem",
+              "migrateExisting"
+            ],
+            "reExport": true
+          },
+          {
+            "file": "./resolution-cache.js",
+            "imports": [
+              "clearAllResolutions",
+              "findResolutionDir",
+              "loadResolutions",
+              "saveResolution"
+            ],
+            "reExport": true
+          },
+          {
+            "file": "./update.js",
+            "imports": [
+              "applyUpdate",
+              "previewUpdate"
+            ],
+            "reExport": true
+          },
+          {
+            "file": "./state.js",
+            "imports": [
+              "compareSemver",
+              "computeFileHash",
+              "getAppliedSkills",
+              "getCustomModifications",
+              "readState",
+              "recordCustomModification",
+              "recordSkillApplication",
+              "writeState"
+            ],
+            "reExport": true
+          },
+          {
+            "file": "./structured.js",
+            "imports": [
+              "areRangesCompatible",
+              "mergeDockerComposeServices",
+              "mergeEnvAdditions",
+              "mergeNpmDependencies",
+              "runNpmInstall"
+            ],
+            "reExport": true
+          }
+        ],
+        "exports": [
+          "applySkill",
+          "clearBackup",
+          "createBackup",
+          "restoreBackup",
+          "BACKUP_DIR",
+          "BASE_DIR",
+          "SKILLS_SCHEMA_VERSION",
+          "CUSTOM_DIR",
+          "LOCK_FILE",
+          "NANOCLAW_DIR",
+          "RESOLUTIONS_DIR",
+          "SHIPPED_RESOLUTIONS_DIR",
+          "STATE_FILE",
+          "abortCustomize",
+          "commitCustomize",
+          "isCustomizeActive",
+          "startCustomize",
+          "executeFileOps",
+          "initNanoclawDir",
+          "acquireLock",
+          "isLocked",
+          "releaseLock",
+          "checkConflicts",
+          "checkCoreVersion",
+          "checkDependencies",
+          "checkSystemVersion",
+          "readManifest",
+          "cleanupMergeState",
+          "isGitRepo",
+          "mergeFile",
+          "runRerere",
+          "setupRerereAdapter",
+          "loadPathRemap",
+          "recordPathRemap",
+          "resolvePathRemap",
+          "rebase",
+          "findSkillDir",
+          "replaySkills",
+          "uninstallSkill",
+          "initSkillsSystem",
+          "migrateExisting",
+          "clearAllResolutions",
+          "findResolutionDir",
+          "loadResolutions",
+          "saveResolution",
+          "applyUpdate",
+          "previewUpdate",
+          "compareSemver",
+          "computeFileHash",
+          "getAppliedSkills",
+          "getCustomModifications",
+          "readState",
+          "recordCustomModification",
+          "recordSkillApplication",
+          "writeState",
+          "areRangesCompatible",
+          "mergeDockerComposeServices",
+          "mergeEnvAdditions",
+          "mergeNpmDependencies",
+          "runNpmInstall"
+        ],
+        "reExported": [
+          "applySkill",
+          "clearBackup",
+          "createBackup",
+          "restoreBackup",
+          "BACKUP_DIR",
+          "BASE_DIR",
+          "SKILLS_SCHEMA_VERSION",
+          "CUSTOM_DIR",
+          "LOCK_FILE",
+          "NANOCLAW_DIR",
+          "RESOLUTIONS_DIR",
+          "SHIPPED_RESOLUTIONS_DIR",
+          "STATE_FILE",
+          "abortCustomize",
+          "commitCustomize",
+          "isCustomizeActive",
+          "startCustomize",
+          "executeFileOps",
+          "initNanoclawDir",
+          "acquireLock",
+          "isLocked",
+          "releaseLock",
+          "checkConflicts",
+          "checkCoreVersion",
+          "checkDependencies",
+          "checkSystemVersion",
+          "readManifest",
+          "cleanupMergeState",
+          "isGitRepo",
+          "mergeFile",
+          "runRerere",
+          "setupRerereAdapter",
+          "loadPathRemap",
+          "recordPathRemap",
+          "resolvePathRemap",
+          "rebase",
+          "findSkillDir",
+          "replaySkills",
+          "uninstallSkill",
+          "initSkillsSystem",
+          "migrateExisting",
+          "clearAllResolutions",
+          "findResolutionDir",
+          "loadResolutions",
+          "saveResolution",
+          "applyUpdate",
+          "previewUpdate",
+          "compareSemver",
+          "computeFileHash",
+          "getAppliedSkills",
+          "getCustomModifications",
+          "readState",
+          "recordCustomModification",
+          "recordSkillApplication",
+          "writeState",
+          "areRangesCompatible",
+          "mergeDockerComposeServices",
+          "mergeEnvAdditions",
+          "mergeNpmDependencies",
+          "runNpmInstall"
+        ]
+      },
+      "skills-engine/init.ts": {
+        "description": "init module",
+        "externalDependencies": [],
+        "nodeDependencies": [
+          {
+            "module": "child_process",
+            "imports": [
+              "execSync"
+            ]
+          },
+          {
+            "module": "fs",
+            "imports": [
+              "fs"
+            ]
+          },
+          {
+            "module": "path",
+            "imports": [
+              "path"
+            ]
+          }
+        ],
+        "internalDependencies": [
+          {
+            "file": "./constants.js",
+            "imports": [
+              "BACKUP_DIR",
+              "BASE_DIR",
+              "BASE_EXCLUDES",
+              "BASE_INCLUDES",
+              "NANOCLAW_DIR"
+            ]
+          },
+          {
+            "file": "./fs-utils.js",
+            "imports": [
+              "copyDir"
+            ]
+          },
+          {
+            "file": "./merge.js",
+            "imports": [
+              "isGitRepo"
+            ]
+          },
+          {
+            "file": "./state.js",
+            "imports": [
+              "writeState"
+            ]
+          },
+          {
+            "file": "./types.js",
+            "imports": [
+              "SkillState"
+            ]
+          }
+        ],
+        "exports": [
+          "initNanoclawDir"
+        ],
+        "functions": [
+          "initNanoclawDir"
+        ]
+      },
+      "skills-engine/lock.ts": {
+        "description": "lock module",
+        "externalDependencies": [],
+        "nodeDependencies": [
+          {
+            "module": "fs",
+            "imports": [
+              "fs"
+            ]
+          },
+          {
+            "module": "path",
+            "imports": [
+              "path"
+            ]
+          }
+        ],
+        "internalDependencies": [
+          {
+            "file": "./constants.js",
+            "imports": [
+              "LOCK_FILE"
+            ]
+          }
+        ],
+        "exports": [
+          "acquireLock",
+          "releaseLock",
+          "isLocked"
+        ],
+        "functions": [
+          "acquireLock",
+          "releaseLock",
+          "isLocked"
+        ]
+      },
+      "skills-engine/manifest.ts": {
+        "description": "manifest module",
+        "externalDependencies": [
+          {
+            "package": "yaml",
+            "imports": [
+              "parse"
+            ]
+          }
+        ],
+        "nodeDependencies": [
+          {
+            "module": "fs",
+            "imports": [
+              "fs"
+            ]
+          },
+          {
+            "module": "path",
+            "imports": [
+              "path"
+            ]
+          }
+        ],
+        "internalDependencies": [
+          {
+            "file": "./constants.js",
+            "imports": [
+              "SKILLS_SCHEMA_VERSION"
+            ]
+          },
+          {
+            "file": "./state.js",
+            "imports": [
+              "getAppliedSkills",
+              "readState",
+              "compareSemver"
+            ]
+          },
+          {
+            "file": "./types.js",
+            "imports": [
+              "SkillManifest"
+            ]
+          }
+        ],
+        "exports": [
+          "readManifest",
+          "checkCoreVersion",
+          "checkDependencies",
+          "checkSystemVersion",
+          "checkConflicts"
+        ],
+        "functions": [
+          "readManifest",
+          "checkCoreVersion",
+          "checkDependencies",
+          "checkSystemVersion",
+          "checkConflicts"
+        ]
+      },
+      "skills-engine/merge.ts": {
+        "description": "Run git merge-file to three-way merge files.",
+        "externalDependencies": [],
+        "nodeDependencies": [
+          {
+            "module": "child_process",
+            "imports": [
+              "execFileSync",
+              "execSync"
+            ]
+          },
+          {
+            "module": "fs",
+            "imports": [
+              "fs"
+            ]
+          },
+          {
+            "module": "path",
+            "imports": [
+              "path"
+            ]
+          }
+        ],
+        "internalDependencies": [
+          {
+            "file": "./types.js",
+            "imports": [
+              "MergeResult"
+            ]
+          }
+        ],
+        "exports": [
+          "isGitRepo",
+          "mergeFile",
+          "setupRerereAdapter",
+          "runRerere",
+          "cleanupMergeState"
+        ],
+        "functions": [
+          "isGitRepo",
+          "mergeFile",
+          "setupRerereAdapter",
+          "runRerere",
+          "cleanupMergeState"
+        ]
+      },
+      "skills-engine/migrate.ts": {
+        "description": "migrate module",
+        "externalDependencies": [],
+        "nodeDependencies": [
+          {
+            "module": "fs",
+            "imports": [
+              "fs"
+            ]
+          },
+          {
+            "module": "path",
+            "imports": [
+              "path"
+            ]
+          }
+        ],
+        "internalDependencies": [
+          {
+            "file": "./constants.js",
+            "imports": [
+              "BASE_DIR",
+              "CUSTOM_DIR",
+              "NANOCLAW_DIR"
+            ]
+          },
+          {
+            "file": "./git-utils.js",
+            "imports": [
+              "gitDiffNoIndex"
+            ]
+          },
+          {
+            "file": "./init.js",
+            "imports": [
+              "initNanoclawDir"
+            ]
+          },
+          {
+            "file": "./state.js",
+            "imports": [
+              "recordCustomModification"
+            ]
+          }
+        ],
+        "exports": [
+          "initSkillsSystem",
+          "migrateExisting"
+        ],
+        "functions": [
+          "initSkillsSystem",
+          "migrateExisting"
+        ]
+      },
+      "skills-engine/path-remap.ts": {
+        "description": "path-remap module",
+        "externalDependencies": [],
+        "nodeDependencies": [
+          {
+            "module": "fs",
+            "imports": [
+              "fs"
+            ]
+          },
+          {
+            "module": "path",
+            "imports": [
+              "path"
+            ]
+          }
+        ],
+        "internalDependencies": [
+          {
+            "file": "./fs-utils.js",
+            "imports": [
+              "toPosix"
+            ]
+          },
+          {
+            "file": "./state.js",
+            "imports": [
+              "readState",
+              "writeState"
+            ]
+          }
+        ],
+        "exports": [
+          "resolvePathRemap",
+          "loadPathRemap",
+          "recordPathRemap"
+        ],
+        "functions": [
+          "resolvePathRemap",
+          "loadPathRemap",
+          "recordPathRemap"
+        ]
+      },
+      "skills-engine/rebase.ts": {
+        "description": "rebase module",
+        "externalDependencies": [],
+        "nodeDependencies": [
+          {
+            "module": "child_process",
+            "imports": [
+              "execFileSync",
+              "execSync"
+            ]
+          },
+          {
+            "module": "crypto",
+            "imports": [
+              "crypto"
+            ]
+          },
+          {
+            "module": "fs",
+            "imports": [
+              "fs"
+            ]
+          },
+          {
+            "module": "os",
+            "imports": [
+              "os"
+            ]
+          },
+          {
+            "module": "path",
+            "imports": [
+              "path"
+            ]
+          }
+        ],
+        "internalDependencies": [
+          {
+            "file": "./backup.js",
+            "imports": [
+              "clearBackup",
+              "createBackup",
+              "restoreBackup"
+            ]
+          },
+          {
+            "file": "./constants.js",
+            "imports": [
+              "BASE_DIR",
+              "BASE_EXCLUDES",
+              "NANOCLAW_DIR"
+            ]
+          },
+          {
+            "file": "./fs-utils.js",
+            "imports": [
+              "copyDir",
+              "toPosix"
+            ]
+          },
+          {
+            "file": "./git-utils.js",
+            "imports": [
+              "gitDiffNoIndex"
+            ]
+          },
+          {
+            "file": "./lock.js",
+            "imports": [
+              "acquireLock"
+            ]
+          },
+          {
+            "file": "./merge.js",
+            "imports": [
+              "cleanupMergeState",
+              "isGitRepo",
+              "mergeFile",
+              "runRerere",
+              "setupRerereAdapter"
+            ]
+          },
+          {
+            "file": "./resolution-cache.js",
+            "imports": [
+              "clearAllResolutions"
+            ]
+          },
+          {
+            "file": "./state.js",
+            "imports": [
+              "computeFileHash",
+              "readState",
+              "writeState"
+            ]
+          },
+          {
+            "file": "./types.js",
+            "imports": [
+              "RebaseResult"
+            ],
+            "typeOnly": true
+          }
+        ],
+        "exports": [
+          "rebase"
+        ],
+        "functions": [
+          "rebase"
+        ]
+      },
+      "skills-engine/replay.ts": {
+        "description": "Scan .claude/skills/ for a directory whose manifest.yaml has skill: <skillName>.",
+        "externalDependencies": [],
+        "nodeDependencies": [
+          {
+            "module": "child_process",
+            "imports": [
+              "execFileSync",
+              "execSync"
+            ]
+          },
+          {
+            "module": "crypto",
+            "imports": [
+              "crypto"
+            ]
+          },
+          {
+            "module": "fs",
+            "imports": [
+              "fs"
+            ]
+          },
+          {
+            "module": "os",
+            "imports": [
+              "os"
+            ]
+          },
+          {
+            "module": "path",
+            "imports": [
+              "path"
+            ]
+          }
+        ],
+        "internalDependencies": [
+          {
+            "file": "./constants.js",
+            "imports": [
+              "BASE_DIR",
+              "NANOCLAW_DIR"
+            ]
+          },
+          {
+            "file": "./fs-utils.js",
+            "imports": [
+              "copyDir"
+            ]
+          },
+          {
+            "file": "./manifest.js",
+            "imports": [
+              "readManifest"
+            ]
+          },
+          {
+            "file": "./merge.js",
+            "imports": [
+              "cleanupMergeState",
+              "isGitRepo",
+              "mergeFile",
+              "runRerere",
+              "setupRerereAdapter"
+            ]
+          },
+          {
+            "file": "./path-remap.js",
+            "imports": [
+              "loadPathRemap",
+              "resolvePathRemap"
+            ]
+          },
+          {
+            "file": "./resolution-cache.js",
+            "imports": [
+              "loadResolutions"
+            ]
+          },
+          {
+            "file": "./structured.js",
+            "imports": [
+              "mergeDockerComposeServices",
+              "mergeEnvAdditions",
+              "mergeNpmDependencies",
+              "runNpmInstall"
+            ]
+          },
+          {
+            "file": "./file-ops.js",
+            "imports": [
+              "(dynamic)"
+            ]
+          }
+        ],
+        "exports": [
+          "findSkillDir",
+          "replaySkills"
+        ],
+        "interfaces": [
+          "ReplayOptions",
+          "ReplayResult"
+        ],
+        "functions": [
+          "findSkillDir",
+          "replaySkills"
+        ]
+      },
+      "skills-engine/resolution-cache.ts": {
+        "description": "Build the resolution directory key from a set of skill identifiers.",
+        "externalDependencies": [
+          {
+            "package": "yaml",
+            "imports": [
+              "parse",
+              "stringify"
+            ]
+          }
+        ],
+        "nodeDependencies": [
+          {
+            "module": "child_process",
+            "imports": [
+              "execSync"
+            ]
+          },
+          {
+            "module": "fs",
+            "imports": [
+              "fs"
+            ]
+          },
+          {
+            "module": "path",
+            "imports": [
+              "path"
+            ]
+          }
+        ],
+        "internalDependencies": [
+          {
+            "file": "./constants.js",
+            "imports": [
+              "NANOCLAW_DIR",
+              "RESOLUTIONS_DIR",
+              "SHIPPED_RESOLUTIONS_DIR"
+            ]
+          },
+          {
+            "file": "./fs-utils.js",
+            "imports": [
+              "toPosix"
+            ]
+          },
+          {
+            "file": "./state.js",
+            "imports": [
+              "computeFileHash"
+            ]
+          },
+          {
+            "file": "./types.js",
+            "imports": [
+              "FileInputHashes",
+              "ResolutionMeta"
+            ]
+          }
+        ],
+        "exports": [
+          "findResolutionDir",
+          "loadResolutions",
+          "saveResolution",
+          "clearAllResolutions"
+        ],
+        "functions": [
+          "findResolutionDir",
+          "loadResolutions",
+          "saveResolution",
+          "clearAllResolutions"
+        ]
+      },
+      "skills-engine/state.ts": {
+        "description": "Compare two semver strings. Returns negative if a < b, 0 if equal, positive if a > b.",
+        "externalDependencies": [
+          {
+            "package": "yaml",
+            "imports": [
+              "parse",
+              "stringify"
+            ]
+          }
+        ],
+        "nodeDependencies": [
+          {
+            "module": "crypto",
+            "imports": [
+              "crypto"
+            ]
+          },
+          {
+            "module": "fs",
+            "imports": [
+              "fs"
+            ]
+          },
+          {
+            "module": "path",
+            "imports": [
+              "path"
+            ]
+          }
+        ],
+        "internalDependencies": [
+          {
+            "file": "./constants.js",
+            "imports": [
+              "SKILLS_SCHEMA_VERSION",
+              "NANOCLAW_DIR",
+              "STATE_FILE"
+            ]
+          },
+          {
+            "file": "./types.js",
+            "imports": [
+              "AppliedSkill",
+              "CustomModification",
+              "SkillState"
+            ]
+          }
+        ],
+        "exports": [
+          "readState",
+          "writeState",
+          "recordSkillApplication",
+          "getAppliedSkills",
+          "recordCustomModification",
+          "getCustomModifications",
+          "computeFileHash",
+          "compareSemver"
+        ],
+        "functions": [
+          "readState",
+          "writeState",
+          "recordSkillApplication",
+          "getAppliedSkills",
+          "recordCustomModification",
+          "getCustomModifications",
+          "computeFileHash",
+          "compareSemver"
+        ]
+      },
+      "skills-engine/structured.ts": {
+        "description": "structured module",
+        "externalDependencies": [
+          {
+            "package": "yaml",
+            "imports": [
+              "parse",
+              "stringify"
+            ]
+          }
+        ],
+        "nodeDependencies": [
+          {
+            "module": "child_process",
+            "imports": [
+              "execSync"
+            ]
+          },
+          {
+            "module": "fs",
+            "imports": [
+              "fs"
+            ]
+          }
+        ],
+        "internalDependencies": [],
+        "exports": [
+          "areRangesCompatible",
+          "mergeNpmDependencies",
+          "mergeEnvAdditions",
+          "mergeDockerComposeServices",
+          "runNpmInstall"
+        ],
+        "functions": [
+          "areRangesCompatible",
+          "mergeNpmDependencies",
+          "mergeEnvAdditions",
+          "mergeDockerComposeServices",
+          "runNpmInstall"
+        ]
+      },
+      "skills-engine/types.ts": {
+        "description": "types module",
+        "externalDependencies": [],
+        "nodeDependencies": [],
+        "internalDependencies": [],
+        "exports": [],
+        "interfaces": [
+          "SkillManifest",
+          "SkillState",
+          "AppliedSkill",
+          "ApplyResult",
+          "MergeResult",
+          "FileOperation",
+          "FileOpsResult",
+          "CustomModification",
+          "FileInputHashes",
+          "ResolutionMeta",
+          "UpdatePreview",
+          "UpdateResult",
+          "UninstallResult",
+          "RebaseResult"
+        ]
+      },
+      "skills-engine/uninstall.ts": {
+        "description": "uninstall module",
+        "externalDependencies": [],
+        "nodeDependencies": [
+          {
+            "module": "child_process",
+            "imports": [
+              "execFileSync",
+              "execSync"
+            ]
+          },
+          {
+            "module": "fs",
+            "imports": [
+              "fs"
+            ]
+          },
+          {
+            "module": "path",
+            "imports": [
+              "path"
+            ]
+          }
+        ],
+        "internalDependencies": [
+          {
+            "file": "./backup.js",
+            "imports": [
+              "clearBackup",
+              "createBackup",
+              "restoreBackup"
+            ]
+          },
+          {
+            "file": "./constants.js",
+            "imports": [
+              "BASE_DIR",
+              "NANOCLAW_DIR"
+            ]
+          },
+          {
+            "file": "./lock.js",
+            "imports": [
+              "acquireLock"
+            ]
+          },
+          {
+            "file": "./path-remap.js",
+            "imports": [
+              "loadPathRemap",
+              "resolvePathRemap"
+            ]
+          },
+          {
+            "file": "./state.js",
+            "imports": [
+              "computeFileHash",
+              "readState",
+              "writeState"
+            ]
+          },
+          {
+            "file": "./replay.js",
+            "imports": [
+              "findSkillDir",
+              "replaySkills"
+            ]
+          },
+          {
+            "file": "./types.js",
+            "imports": [
+              "UninstallResult"
+            ],
+            "typeOnly": true
+          }
+        ],
+        "exports": [
+          "uninstallSkill"
+        ],
+        "functions": [
+          "uninstallSkill"
+        ]
+      },
+      "skills-engine/update.ts": {
+        "description": "update module",
+        "externalDependencies": [
+          {
+            "package": "yaml",
+            "imports": [
+              "parse"
+            ]
+          }
+        ],
+        "nodeDependencies": [
+          {
+            "module": "child_process",
+            "imports": [
+              "execFileSync",
+              "execSync"
+            ]
+          },
+          {
+            "module": "crypto",
+            "imports": [
+              "crypto"
+            ]
+          },
+          {
+            "module": "fs",
+            "imports": [
+              "fs"
+            ]
+          },
+          {
+            "module": "os",
+            "imports": [
+              "os"
+            ]
+          },
+          {
+            "module": "path",
+            "imports": [
+              "path"
+            ]
+          }
+        ],
+        "internalDependencies": [
+          {
+            "file": "./backup.js",
+            "imports": [
+              "clearBackup",
+              "createBackup",
+              "restoreBackup"
+            ]
+          },
+          {
+            "file": "./constants.js",
+            "imports": [
+              "BASE_DIR",
+              "BASE_EXCLUDES",
+              "NANOCLAW_DIR"
+            ]
+          },
+          {
+            "file": "./fs-utils.js",
+            "imports": [
+              "copyDir",
+              "toPosix"
+            ]
+          },
+          {
+            "file": "./customize.js",
+            "imports": [
+              "isCustomizeActive"
+            ]
+          },
+          {
+            "file": "./lock.js",
+            "imports": [
+              "acquireLock"
+            ]
+          },
+          {
+            "file": "./merge.js",
+            "imports": [
+              "cleanupMergeState",
+              "isGitRepo",
+              "mergeFile",
+              "runRerere",
+              "setupRerereAdapter"
+            ]
+          },
+          {
+            "file": "./path-remap.js",
+            "imports": [
+              "recordPathRemap"
+            ]
+          },
+          {
+            "file": "./state.js",
+            "imports": [
+              "computeFileHash",
+              "readState",
+              "writeState"
+            ]
+          },
+          {
+            "file": "./structured.js",
+            "imports": [
+              "mergeDockerComposeServices",
+              "mergeEnvAdditions",
+              "mergeNpmDependencies",
+              "runNpmInstall"
+            ]
+          },
+          {
+            "file": "./types.js",
+            "imports": [
+              "UpdatePreview",
+              "UpdateResult"
+            ],
+            "typeOnly": true
+          }
+        ],
+        "exports": [
+          "previewUpdate",
+          "applyUpdate"
+        ],
+        "functions": [
+          "previewUpdate",
+          "applyUpdate"
+        ]
+      }
+    },
+    "src/channels": {
       "src/channels/whatsapp.ts": {
         "description": "Sync group metadata from WhatsApp.",
         "externalDependencies": [
@@ -95,7 +2696,7 @@
         ]
       }
     },
-    "root": {
+    "src": {
       "src/config.ts": {
         "description": "Read config values from .env (falls back to process.env).",
         "externalDependencies": [],
@@ -274,6 +2875,12 @@
         ],
         "internalDependencies": [
           {
+            "file": "./env.js",
+            "imports": [
+              "readEnvFile"
+            ]
+          },
+          {
             "file": "./logger.js",
             "imports": [
               "logger"
@@ -368,6 +2975,7 @@
           }
         ],
         "exports": [
+          "buildMessageCursor",
           "initDatabase",
           "_initTestDatabase",
           "storeChatMetadata",
@@ -427,6 +3035,9 @@
           "getRegisteredGroup",
           "setRegisteredGroup",
           "getAllRegisteredGroups"
+        ],
+        "constants": [
+          "buildMessageCursor"
         ]
       },
       "src/env.ts": {
@@ -495,7 +3106,7 @@
         ]
       },
       "src/group-folder.ts": {
-        "description": "group-folder module",
+        "description": "Windows reserved device names (case-insensitive), reserved at every directory",
         "externalDependencies": [],
         "nodeDependencies": [
           {
@@ -575,8 +3186,145 @@
           "GroupQueue"
         ]
       },
+      "src/index.ts": {
+        "description": "Get available groups list for the agent.",
+        "externalDependencies": [],
+        "nodeDependencies": [
+          {
+            "module": "fs",
+            "imports": [
+              "fs"
+            ]
+          },
+          {
+            "module": "path",
+            "imports": [
+              "path"
+            ]
+          },
+          {
+            "module": "url",
+            "imports": [
+              "fileURLToPath"
+            ]
+          }
+        ],
+        "internalDependencies": [
+          {
+            "file": "./config.js",
+            "imports": [
+              "ASSISTANT_NAME",
+              "IDLE_TIMEOUT",
+              "MAIN_GROUP_FOLDER",
+              "POLL_INTERVAL",
+              "TRIGGER_PATTERN"
+            ]
+          },
+          {
+            "file": "./channels/whatsapp.js",
+            "imports": [
+              "WhatsAppChannel"
+            ]
+          },
+          {
+            "file": "./container-runner.js",
+            "imports": [
+              "ContainerOutput",
+              "runContainerAgent",
+              "writeGroupsSnapshot",
+              "writeTasksSnapshot"
+            ]
+          },
+          {
+            "file": "./container-runtime.js",
+            "imports": [
+              "cleanupOrphans",
+              "ensureContainerRuntimeRunning"
+            ]
+          },
+          {
+            "file": "./db.js",
+            "imports": [
+              "getAllChats",
+              "buildMessageCursor",
+              "getAllRegisteredGroups",
+              "getAllSessions",
+              "getAllTasks",
+              "getMessagesSince",
+              "getNewMessages",
+              "getRouterState",
+              "initDatabase",
+              "setRegisteredGroup",
+              "setRouterState",
+              "setSession",
+              "storeChatMetadata",
+              "storeMessage"
+            ]
+          },
+          {
+            "file": "./group-queue.js",
+            "imports": [
+              "GroupQueue"
+            ]
+          },
+          {
+            "file": "./group-folder.js",
+            "imports": [
+              "resolveGroupFolderPath"
+            ]
+          },
+          {
+            "file": "./ipc.js",
+            "imports": [
+              "startIpcWatcher"
+            ]
+          },
+          {
+            "file": "./router.js",
+            "imports": [
+              "findChannel",
+              "formatMessages",
+              "formatOutbound"
+            ]
+          },
+          {
+            "file": "./task-scheduler.js",
+            "imports": [
+              "startSchedulerLoop"
+            ]
+          },
+          {
+            "file": "./types.js",
+            "imports": [
+              "Channel",
+              "NewMessage",
+              "RegisteredGroup"
+            ]
+          },
+          {
+            "file": "./logger.js",
+            "imports": [
+              "logger"
+            ]
+          },
+          {
+            "file": "./container-runner.js",
+            "imports": [
+              "(dynamic)"
+            ]
+          }
+        ],
+        "exports": [
+          "getAvailableGroups",
+          "_setRegisteredGroups"
+        ],
+        "functions": [
+          "getAvailableGroups",
+          "_setRegisteredGroups"
+        ]
+      },
       "src/ipc.ts": {
-        "description": "ipc module",
+        "description": "Move a failed IPC file into the errors/ quarantine directory without ever",
         "externalDependencies": [
           {
             "package": "cron-parser",
@@ -929,130 +3677,34 @@
         "exports": []
       }
     },
-    "entry": {
-      "src/index.ts": {
-        "description": "Get available groups list for the agent.",
-        "externalDependencies": [],
-        "nodeDependencies": [
+    "root": {
+      "vitest.config.ts": {
+        "description": "vitest.config module",
+        "externalDependencies": [
           {
-            "module": "fs",
+            "package": "vitest/config",
             "imports": [
-              "fs"
-            ]
-          },
-          {
-            "module": "path",
-            "imports": [
-              "path"
+              "defineConfig"
             ]
           }
         ],
-        "internalDependencies": [
+        "nodeDependencies": [],
+        "internalDependencies": [],
+        "exports": []
+      },
+      "vitest.skills.config.ts": {
+        "description": "vitest.skills.config module",
+        "externalDependencies": [
           {
-            "file": "./config.js",
+            "package": "vitest/config",
             "imports": [
-              "ASSISTANT_NAME",
-              "IDLE_TIMEOUT",
-              "MAIN_GROUP_FOLDER",
-              "POLL_INTERVAL",
-              "TRIGGER_PATTERN"
-            ]
-          },
-          {
-            "file": "./channels/whatsapp.js",
-            "imports": [
-              "WhatsAppChannel"
-            ]
-          },
-          {
-            "file": "./container-runner.js",
-            "imports": [
-              "ContainerOutput",
-              "runContainerAgent",
-              "writeGroupsSnapshot",
-              "writeTasksSnapshot"
-            ]
-          },
-          {
-            "file": "./container-runtime.js",
-            "imports": [
-              "cleanupOrphans",
-              "ensureContainerRuntimeRunning"
-            ]
-          },
-          {
-            "file": "./db.js",
-            "imports": [
-              "getAllChats",
-              "getAllRegisteredGroups",
-              "getAllSessions",
-              "getAllTasks",
-              "getMessagesSince",
-              "getNewMessages",
-              "getRouterState",
-              "initDatabase",
-              "setRegisteredGroup",
-              "setRouterState",
-              "setSession",
-              "storeChatMetadata",
-              "storeMessage"
-            ]
-          },
-          {
-            "file": "./group-queue.js",
-            "imports": [
-              "GroupQueue"
-            ]
-          },
-          {
-            "file": "./group-folder.js",
-            "imports": [
-              "resolveGroupFolderPath"
-            ]
-          },
-          {
-            "file": "./ipc.js",
-            "imports": [
-              "startIpcWatcher"
-            ]
-          },
-          {
-            "file": "./router.js",
-            "imports": [
-              "findChannel",
-              "formatMessages",
-              "formatOutbound"
-            ]
-          },
-          {
-            "file": "./task-scheduler.js",
-            "imports": [
-              "startSchedulerLoop"
-            ]
-          },
-          {
-            "file": "./types.js",
-            "imports": [
-              "Channel",
-              "NewMessage",
-              "RegisteredGroup"
-            ]
-          },
-          {
-            "file": "./logger.js",
-            "imports": [
-              "logger"
+              "defineConfig"
             ]
           }
         ],
-        "exports": [
-          "getAvailableGroups",
-          "_setRegisteredGroups"
-        ],
-        "functions": [
-          "getAvailableGroups",
-          "_setRegisteredGroups"
-        ]
+        "nodeDependencies": [],
+        "internalDependencies": [],
+        "exports": []
       }
     }
   },
@@ -1066,13 +3718,75 @@
     },
     "layers": [
       {
-        "name": "Channels",
+        "name": "Container/agent-runner/src",
+        "files": [
+          "container/agent-runner/src/index.ts",
+          "container/agent-runner/src/ipc-mcp-stdio.ts"
+        ]
+      },
+      {
+        "name": "Scripts",
+        "files": [
+          "scripts/apply-skill.ts",
+          "scripts/generate-ci-matrix.ts",
+          "scripts/post-update.ts",
+          "scripts/run-ci-tests.ts",
+          "scripts/run-migrations.ts",
+          "scripts/update-core.ts"
+        ]
+      },
+      {
+        "name": "Setup",
+        "files": [
+          "setup/container.ts",
+          "setup/environment.ts",
+          "setup/groups.ts",
+          "setup/index.ts",
+          "setup/mounts.ts",
+          "setup/node-script.ts",
+          "setup/platform.ts",
+          "setup/register.ts",
+          "setup/service.ts",
+          "setup/status.ts",
+          "setup/verify.ts",
+          "setup/whatsapp-auth.ts"
+        ]
+      },
+      {
+        "name": "Skills-engine",
+        "files": [
+          "skills-engine/apply.ts",
+          "skills-engine/backup.ts",
+          "skills-engine/constants.ts",
+          "skills-engine/customize.ts",
+          "skills-engine/file-ops.ts",
+          "skills-engine/fs-utils.ts",
+          "skills-engine/git-utils.ts",
+          "skills-engine/index.ts",
+          "skills-engine/init.ts",
+          "skills-engine/lock.ts",
+          "skills-engine/manifest.ts",
+          "skills-engine/merge.ts",
+          "skills-engine/migrate.ts",
+          "skills-engine/path-remap.ts",
+          "skills-engine/rebase.ts",
+          "skills-engine/replay.ts",
+          "skills-engine/resolution-cache.ts",
+          "skills-engine/state.ts",
+          "skills-engine/structured.ts",
+          "skills-engine/types.ts",
+          "skills-engine/uninstall.ts",
+          "skills-engine/update.ts"
+        ]
+      },
+      {
+        "name": "Src/channels",
         "files": [
           "src/channels/whatsapp.ts"
         ]
       },
       {
-        "name": "Root",
+        "name": "Src",
         "files": [
           "src/config.ts",
           "src/container-runner.ts",
@@ -1082,6 +3796,7 @@
           "src/fs-sync.ts",
           "src/group-folder.ts",
           "src/group-queue.ts",
+          "src/index.ts",
           "src/ipc.ts",
           "src/logger.ts",
           "src/mount-security.ts",
@@ -1092,29 +3807,30 @@
         ]
       },
       {
-        "name": "Entry",
+        "name": "Root",
         "files": [
-          "src/index.ts"
+          "vitest.config.ts",
+          "vitest.skills.config.ts"
         ]
       }
     ]
   },
   "statistics": {
-    "totalTypeScriptFiles": 17,
-    "totalModules": 3,
-    "totalLinesOfCode": 4614,
-    "totalExports": 85,
+    "totalTypeScriptFiles": 61,
+    "totalModules": 7,
+    "totalLinesOfCode": 12104,
+    "totalExports": 240,
     "totalClasses": 2,
-    "totalInterfaces": 18,
-    "totalFunctions": 63,
-    "totalTypeGuards": 2,
+    "totalInterfaces": 36,
+    "totalFunctions": 145,
+    "totalTypeGuards": 9,
     "totalEnums": 0,
-    "totalConstants": 20,
-    "totalReExports": 0,
-    "totalTypeOnlyImports": 0,
+    "totalConstants": 33,
+    "totalReExports": 60,
+    "totalTypeOnlyImports": 4,
     "runtimeCircularDeps": 0,
     "typeOnlyCircularDeps": 0,
-    "unusedFilesCount": 1,
-    "unusedExportsCount": 29
+    "unusedFilesCount": 0,
+    "unusedExportsCount": 11
   }
 }

@@ -11,7 +11,10 @@
  * Usage: npx tsx tools/create-dependency-graph.ts
  *
  * This tool is generic and does not depend on any codebase-specific functions.
- * It dynamically discovers the project structure from the filesystem.
+ * It discovers the project structure from the filesystem: it scans the whole
+ * project root for first-party `.ts` source, skipping a default set of
+ * non-source directories (node_modules, dist, build output, docs, runtime data,
+ * and the tools/ folder itself). Override the skip list with --exclude.
  */
 
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'fs';
@@ -56,6 +59,8 @@ interface ParsedFile {
   internalDependencies: Dependency[];
   exports: FileExports;
   description: string | null;
+  isExecutable: boolean; // starts with a shebang (#!) — a CLI entry point
+  referencedFileNames: string[]; // file names appearing as string literals
 }
 
 interface DependencyMatrix {
@@ -104,12 +109,36 @@ interface ModuleMap {
 interface PackageJson {
   name: string;
   version: string;
+  scripts?: Record<string, string>;
 }
+
+// Directory names skipped at any depth: build output, deps, VCS, generated
+// docs, runtime data, and tooling that is not first-party application source.
+const DEFAULT_EXCLUDE_DIRS = [
+  'node_modules',
+  'dist',
+  'build',
+  'coverage',
+  '.git',
+  '.nanoclaw',
+  '.github',
+  '.claude', // skill templates / agent config, not core source
+  'tools', // this tool and its siblings are not application source
+  'docs', // generated output (incl. this tool's own reports)
+  'groups', // per-group runtime state
+  'store', // runtime data store
+  'data', // runtime data
+  'launchd',
+  'assets',
+  'config-examples',
+  'repo-tokens',
+];
 
 // CLI options interface
 interface CLIOptions {
   root: string;
   includeTests: boolean;
+  excludeDirs: Set<string>;
 }
 
 // Constants - support CLI argument or current working directory for portability
@@ -118,31 +147,58 @@ function parseCliOptions(): CLIOptions {
   const options: CLIOptions = {
     root: process.cwd(),
     includeTests: false,
+    excludeDirs: new Set(DEFAULT_EXCLUDE_DIRS),
   };
 
   for (const arg of args) {
     if (arg.startsWith('--root=')) {
       options.root = arg.slice(7);
+    } else if (arg.startsWith('--exclude=')) {
+      // Replace the default skip list with a comma-separated one.
+      options.excludeDirs = new Set(
+        arg
+          .slice('--exclude='.length)
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean),
+      );
+    } else if (arg.startsWith('--also-exclude=')) {
+      // Add to the default skip list.
+      for (const d of arg
+        .slice('--also-exclude='.length)
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)) {
+        options.excludeDirs.add(d);
+      }
     } else if (arg === '--include-tests' || arg === '-t') {
       options.includeTests = true;
     } else if (arg === '--help' || arg === '-h') {
       console.log(`
 Dependency Graph Generator
 
+Scans the whole project root for first-party .ts source, skipping a default set
+of non-source directories.
+
 Usage:
   create-dependency-graph [options] [project-root]
 
 Options:
-  --root=<path>      Project root directory (default: current directory)
-  --include-tests    Include test files in dependency analysis
-  -t                 Short form of --include-tests
-  --help, -h         Show this help
+  --root=<path>          Project root directory (default: current directory)
+  --exclude=<a,b,c>      Replace the default skip list of directory names
+  --also-exclude=<a,b>   Add directory names to the default skip list
+  --include-tests        Include test files in dependency analysis
+  -t                     Short form of --include-tests
+  --help, -h             Show this help
+
+Default skipped directories:
+  ${DEFAULT_EXCLUDE_DIRS.join(', ')}
 
 Examples:
   create-dependency-graph                         # Use current directory
   create-dependency-graph ./my-project            # Specify project path
   create-dependency-graph --include-tests         # Include test file analysis
-  create-dependency-graph --root=C:/projects/my-app -t
+  create-dependency-graph --also-exclude=examples # Skip an extra directory
 `);
       process.exit(0);
     } else if (!arg.startsWith('-') && existsSync(arg)) {
@@ -154,12 +210,9 @@ Examples:
   return options;
 }
 
-function getProjectRoot(): string {
-  return parseCliOptions().root;
-}
-
-const ROOT_DIR = getProjectRoot();
-const SRC_DIR = join(ROOT_DIR, 'src');
+const CLI_OPTIONS = parseCliOptions();
+const ROOT_DIR = CLI_OPTIONS.root;
+const EXCLUDE_DIRS = CLI_OPTIONS.excludeDirs;
 const OUTPUT_DIR = join(ROOT_DIR, 'docs', 'architecture');
 
 // Read package.json for version and name
@@ -168,6 +221,16 @@ try {
   packageJson = JSON.parse(readFileSync(join(ROOT_DIR, 'package.json'), 'utf-8')) as PackageJson;
 } catch {
   console.warn('Warning: Could not read package.json, using defaults');
+}
+
+// Source files invoked directly by an npm script (e.g. `tsx src/index.ts`) are
+// program entry points, not imported libraries — collect them so they are not
+// mis-reported as unused.
+const SCRIPT_ENTRY_POINTS = new Set<string>();
+for (const cmd of Object.values(packageJson.scripts ?? {})) {
+  for (const m of cmd.matchAll(/(?:tsx|node)\s+([^\s'"]+\.ts)/g)) {
+    SCRIPT_ENTRY_POINTS.add(m[1].replace(/\\/g, '/'));
+  }
 }
 
 /**
@@ -181,8 +244,14 @@ function getAllTsFiles(dir: string, files: string[] = []): string[] {
   const entries = readdirSync(dir);
 
   for (const entry of entries) {
-    // Skip node_modules directories
-    if (entry === 'node_modules') {
+    // Skip non-source directories (node_modules, dist, docs, tools, ...) plus
+    // test-infra directories — their .test.ts are filtered below, but helper
+    // files (e.g. test-helpers.ts) are test infra, not application source.
+    if (
+      EXCLUDE_DIRS.has(entry) ||
+      entry === '__tests__' ||
+      entry === '__mocks__'
+    ) {
       continue;
     }
 
@@ -191,7 +260,12 @@ function getAllTsFiles(dir: string, files: string[] = []): string[] {
 
     if (stat.isDirectory()) {
       getAllTsFiles(fullPath, files);
-    } else if (entry.endsWith('.ts') && !entry.endsWith('.test.ts') && !entry.endsWith('.spec.ts')) {
+    } else if (
+      entry.endsWith('.ts') &&
+      !entry.endsWith('.test.ts') &&
+      !entry.endsWith('.spec.ts') &&
+      !entry.endsWith('.d.ts')
+    ) {
       files.push(fullPath);
     }
   }
@@ -210,8 +284,8 @@ function getAllTestFiles(dir: string, files: string[] = []): string[] {
   const entries = readdirSync(dir);
 
   for (const entry of entries) {
-    // Skip node_modules directories
-    if (entry === 'node_modules') {
+    // Skip non-source directories (node_modules, dist, docs, tools, ...).
+    if (EXCLUDE_DIRS.has(entry)) {
       continue;
     }
 
@@ -429,8 +503,19 @@ function parseFile(filePath: string): ParsedFile {
       constants: [],
       reExported: []
     },
-    description: extractDescription(content)
+    description: extractDescription(content),
+    isExecutable: content.startsWith('#!'),
+    referencedFileNames: []
   };
+
+  // Capture file names referenced as string literals (e.g. a spawned child
+  // process: path.join(__dirname, 'ipc-mcp-stdio.js')). Such files are runtime
+  // entry points even though nothing imports them.
+  const stringFileRefRegex = /['"`]([\w.-]+\.(?:js|ts))['"`]/g;
+  let refMatch: RegExpExecArray | null;
+  while ((refMatch = stringFileRefRegex.exec(content)) !== null) {
+    result.referencedFileNames.push(basename(refMatch[1]));
+  }
 
   // Parse imports - enhanced to detect type-only imports
   // Matches: import type { ... }, import { type X, Y }, import X from, import * as X from
@@ -485,6 +570,17 @@ function parseFile(filePath: string): ParsedFile {
         package: source,
         imports: imports
       });
+    }
+  }
+
+  // Parse dynamic imports: import('./module') — used for lazy/step loading
+  // (e.g. setup steps). Treated as runtime internal dependencies so the targets
+  // are not mis-reported as unused.
+  const dynamicImportRegex = /import\s*\(\s*['"]([^'"]+)['"]\s*\)/g;
+  while ((match = dynamicImportRegex.exec(content)) !== null) {
+    const source = match[1];
+    if (source.startsWith('.')) {
+      result.internalDependencies.push({ file: source, imports: ['(dynamic)'] });
     }
   }
 
@@ -614,36 +710,35 @@ function extractDescription(content: string): string | null {
 }
 
 /**
- * Dynamically discover and categorize files into modules based on directory structure
+ * A file is an entry point (not imported as a library, so never "unused") if it
+ * is executable (shebang), an index.ts (module/package entry or barrel), or a
+ * CLI script under scripts/.
+ */
+function isEntryPoint(file: ParsedFile): boolean {
+  return (
+    file.isExecutable ||
+    file.name === 'index' ||
+    file.name.endsWith('.config') || // *.config.ts consumed by tooling
+    file.path.startsWith('scripts/') ||
+    SCRIPT_ENTRY_POINTS.has(file.path)
+  );
+}
+
+/**
+ * Categorize files into modules by their containing directory (root-relative).
+ * Works across all first-party source roots (src/, setup/, skills-engine/,
+ * scripts/, container/agent-runner/src/, ...); files directly in the project
+ * root are grouped under "root".
  */
 function categorizeFiles(files: ParsedFile[]): ModuleMap {
   const modules: ModuleMap = {};
 
   for (const file of files) {
-    const relativePath = file.path;
+    const slash = file.path.lastIndexOf('/');
+    const moduleName = slash === -1 ? 'root' : file.path.slice(0, slash);
 
-    // Handle entry point (src/index.ts)
-    if (relativePath === 'src/index.ts') {
-      if (!modules.entry) modules.entry = {};
-      modules.entry[relativePath] = file;
-      continue;
-    }
-
-    // Extract the module name from path (first directory after src/)
-    const parts = relativePath.split('/');
-    if (parts.length >= 2 && parts[0] === 'src') {
-      const moduleName = parts[1].replace('.ts', '');
-
-      // If it's a file directly in src/, categorize by filename
-      if (parts.length === 2) {
-        if (!modules.root) modules.root = {};
-        modules.root[relativePath] = file;
-      } else {
-        // It's in a subdirectory
-        if (!modules[moduleName]) modules[moduleName] = {};
-        modules[moduleName][relativePath] = file;
-      }
-    }
+    if (!modules[moduleName]) modules[moduleName] = {};
+    modules[moduleName][file.path] = file;
   }
 
   // Remove empty modules
@@ -806,7 +901,7 @@ function detectCircularDependencies(files: ParsedFile[]): CircularDependencyResu
 /**
  * Detect unused files and exports
  */
-function detectUnused(files: ParsedFile[]): UnusedAnalysis {
+function detectUnused(files: ParsedFile[], testFiles: ParsedFile[] = []): UnusedAnalysis {
   const filePaths = new Set(files.map(f => f.path));
 
   // Build a set of all imported files
@@ -814,7 +909,9 @@ function detectUnused(files: ParsedFile[]): UnusedAnalysis {
   // Build a map of all imported symbols per file
   const importedSymbols = new Map<string, Set<string>>();
 
-  for (const file of files) {
+  // Count imports from both source and test files so an export used only by a
+  // test (e.g. _initTestDatabase) is not mis-reported as unused.
+  for (const file of [...files, ...testFiles]) {
     for (const dep of file.internalDependencies) {
       const resolved = resolvePath(file.path, dep.file);
       if (filePaths.has(resolved)) {
@@ -826,8 +923,9 @@ function detectUnused(files: ParsedFile[]): UnusedAnalysis {
         }
         const symbols = importedSymbols.get(resolved)!;
         for (const imp of dep.imports) {
-          if (imp === '*') {
-            // Wildcard import - mark all exports as used
+          if (imp === '*' || imp === '(dynamic)') {
+            // Wildcard or dynamic import — the specific symbols used aren't
+            // known, so conservatively mark all of the target's exports as used.
             symbols.add('*');
           } else {
             symbols.add(imp.replace(/^\* as /, ''));
@@ -837,11 +935,26 @@ function detectUnused(files: ParsedFile[]): UnusedAnalysis {
     }
   }
 
-  // Find unused files (excluding entry point and index files which are re-export hubs)
+  // Files referenced by name as a string literal anywhere (e.g. a spawned
+  // child process) are runtime entry points even if nothing imports them.
+  const referencedByName = new Set<string>();
+  for (const file of files) {
+    for (const ref of file.referencedFileNames) referencedByName.add(ref);
+  }
+
+  // Find unused files. Entry points (executable scripts, index.ts barrels/
+  // package mains, scripts/, npm-script targets, *.config.ts) and files
+  // referenced by name are never imported as libraries, so they are not
+  // "unused" — skip them to avoid false positives.
   const unusedFiles: string[] = [];
   for (const file of files) {
-    if (file.path === 'src/index.ts') continue; // Entry point is always "used"
-    if (file.name === 'index' && file.exports.reExported.length > 0) continue; // Re-export hubs
+    if (isEntryPoint(file)) continue;
+    if (
+      referencedByName.has(`${file.name}.js`) ||
+      referencedByName.has(`${file.name}.ts`)
+    ) {
+      continue;
+    }
     if (!importedFiles.has(file.path)) {
       unusedFiles.push(file.path);
     }
@@ -1009,10 +1122,11 @@ function generateJSON(files: ParsedFile[], modules: ModuleMap, stats: Statistics
       totalExports: stats.totalExports
     },
     entryPoints: files
-      .filter(f => f.path === 'src/index.ts')
+      .filter(isEntryPoint)
+      .filter(f => f.name !== 'index' || f.path.split('/').length <= 3)
       .map(f => ({
         file: f.path,
-        type: 'main',
+        type: f.isExecutable || f.path.startsWith('scripts/') ? 'cli' : 'main',
         description: f.description || 'Entry Point'
       })),
     modules: modulesJson,
@@ -1518,8 +1632,9 @@ function generateTestCoverageJson(coverage: TestCoverageAnalysis): object {
  * Main function
  */
 async function main(): Promise<void> {
-  const cliOptions = parseCliOptions();
+  const cliOptions = CLI_OPTIONS;
   console.log('Scanning codebase for dependencies...');
+  console.log(`Skipping directories: ${[...EXCLUDE_DIRS].join(', ')}`);
   if (cliOptions.includeTests) {
     console.log('Test file analysis enabled');
   }
@@ -1531,17 +1646,23 @@ async function main(): Promise<void> {
   }
 
   // Get all TypeScript files
-  const tsFiles = getAllTsFiles(SRC_DIR);
+  const tsFiles = getAllTsFiles(ROOT_DIR);
   console.log(`Found ${tsFiles.length} TypeScript files`);
 
   if (tsFiles.length === 0) {
-    console.error('No TypeScript files found in src/');
+    console.error('No TypeScript source files found in the project');
     process.exit(1);
   }
 
   // Parse all files
   const parsedFiles = tsFiles.map(parseFile);
   console.log('Parsed all files');
+
+  // Parse test files up front (when requested) so unused-export detection can
+  // account for symbols that are only used by tests.
+  const parsedTestFiles: ParsedFile[] = cliOptions.includeTests
+    ? getAllTestFiles(ROOT_DIR).map(parseFile)
+    : [];
 
   // Categorize into modules
   const modules = categorizeFiles(parsedFiles);
@@ -1551,8 +1672,8 @@ async function main(): Promise<void> {
   const circularDeps = detectCircularDependencies(parsedFiles);
   console.log(`Found ${circularDeps.all.length} circular dependencies (${circularDeps.runtime.length} runtime, ${circularDeps.typeOnly.length} type-only)`);
 
-  // Detect unused files and exports
-  const unusedAnalysis = detectUnused(parsedFiles);
+  // Detect unused files and exports (test imports count as usage)
+  const unusedAnalysis = detectUnused(parsedFiles, parsedTestFiles);
 
   // Generate statistics
   const stats = generateStatistics(parsedFiles, modules, circularDeps, unusedAnalysis);
@@ -1595,20 +1716,9 @@ async function main(): Promise<void> {
   let testCoverage: TestCoverageAnalysis | null = null;
   if (cliOptions.includeTests) {
     console.log('\nAnalyzing test coverage...');
+    console.log(`Found ${parsedTestFiles.length} test files`);
 
-    // Scan for test files in tests/ directory and src/ (for any .test.ts files)
-    const testDir = join(ROOT_DIR, 'tests');
-    const testFilePaths = [
-      ...getAllTestFiles(testDir),
-      ...getAllTestFiles(SRC_DIR),
-    ];
-    console.log(`Found ${testFilePaths.length} test files`);
-
-    // Parse test files
-    const parsedTestFiles = testFilePaths.map(parseFile);
-    console.log('Parsed all test files');
-
-    // Analyze test coverage
+    // Analyze test coverage (test files parsed earlier)
     testCoverage = analyzeTestCoverage(parsedFiles, parsedTestFiles);
 
     // Generate test coverage outputs
