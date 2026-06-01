@@ -12,9 +12,9 @@ jobs:
       fail-fast: false
       matrix:
         # Cover the supported platforms (Linux + Windows 10/11) and the Node
-        # floor (20) plus the documented target (22).
+        # floor (20), the documented target (22), and current (24).
         os: [ubuntu-latest, windows-latest]
-        node: [20, 22]
+        node: [20, 22, 24]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -41,7 +41,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: [20, 22]
+        node: [20, 22, 24]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
