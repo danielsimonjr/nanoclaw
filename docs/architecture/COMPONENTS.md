@@ -1,18 +1,21 @@
 # NanoClaw — Component Reference
 
 **Version**: 1.1.0
-**Last Updated**: 2026-05-31
+**Last Updated**: 2026-06-01
 
-One section per significant `src/` component: its responsibility, key exports,
+One section per significant component: its responsibility, key exports,
 collaborators (imports / importers, from the dependency graph), and notes. For
 exact signatures see [API.md](./API.md); for the raw import matrix see
 [DEPENDENCY_GRAPH.md](./DEPENDENCY_GRAPH.md).
 
-> **Scope.** This reference covers the **17 TypeScript files under `src/`**
-> (3 modules — `channels`, `root`, `entry`; 85 exports; 4,614 LOC) scanned by
-> the dependency tool. The repository also ships `setup/`, `skills-engine/`,
-> and `container/agent-runner/` (the in-container agent process); those run in
-> separate contexts and are intentionally out of scope here.
+> **Scope.** The full codebase is **61 first-party TypeScript files across 7
+> modules** (240 exports, 0 circular dependencies): `src/` (16) and
+> `src/channels/` (1) — the orchestrator runtime, covered in depth below; plus
+> `skills-engine/` (22), `setup/` (12), `scripts/` (6),
+> `container/agent-runner/src/` (2), and 2 root config files. The non-`src/`
+> modules run in separate processes/contexts (CLI tooling, the install wizard,
+> the in-container agent) and are summarized in
+> [Auxiliary Modules](#auxiliary-modules) at the end.
 
 ---
 
@@ -43,6 +46,11 @@ exact signatures see [API.md](./API.md); for the raw import matrix see
    - [logger](#logger)
    - [types](#types)
 9. [Component Dependencies](#component-dependencies)
+10. [Auxiliary Modules](#auxiliary-modules)
+    - [skills-engine](#skills-engine)
+    - [setup](#setup)
+    - [scripts](#scripts)
+    - [container/agent-runner](#containeragent-runner)
 
 ---
 
@@ -86,10 +94,11 @@ exported to none).
 **File**: `src/index.ts` · **Module**: entry
 
 **Responsibility**: Process entry point and orchestrator. Holds the in-memory
-state (`lastTimestamp`, `sessions`, `registeredGroups`, `lastAgentTimestamp`),
-runs the message poll loop, wires the channel(s), `GroupQueue`, IPC watcher and
-scheduler together, processes a group's pending messages, and handles graceful
-shutdown.
+state (`lastTimestamp`, `sessions`, `registeredGroups`, `lastAgentTimestamp` —
+the latter two now hold `(timestamp,id)` keyset cursors built by
+`buildMessageCursor`, not bare timestamps), runs the message poll loop, wires the
+channel(s), `GroupQueue`, IPC watcher and scheduler together, processes a group's
+pending messages, and handles graceful shutdown.
 
 **Key exports**:
 - `getAvailableGroups(): AvailableGroup[]` — group chats annotated with
@@ -133,9 +142,12 @@ metadata sync.
 emits chat metadata for discovery. Detects bot messages via `fromMe` (own
 number) or an `<ASSISTANT_NAME>:` content prefix (shared number). Translates
 `@lid` JIDs to phone JIDs via a local cache + Baileys' signal repository. A QR
-prompt means re-auth is needed and the process exits. A sibling
-`src/whatsapp-auth.ts` script handles interactive authentication (no exports;
-not part of the runtime surface).
+prompt means re-auth is needed and the process exits. Reconnect first **tears
+down the old socket** — removes its `connection.update` / `creds.update` /
+`messages.upsert` listeners and calls `sock.end()` — before creating a new
+`WASocket`, so reconnect loops don't leak sockets/listeners or double-deliver
+messages. A sibling `src/whatsapp-auth.ts` script handles interactive
+authentication (no exports; not part of the runtime surface).
 
 ---
 
@@ -240,8 +252,11 @@ completes (`once`), and writes a run log.
 **Notes**: `group` context-mode tasks reuse the group's current session;
 `isolated` tasks start fresh. After a result, the task container is closed
 promptly (`TASK_CLOSE_DELAY_MS = 10s`) rather than waiting the full idle
-timeout, since tasks are single-turn. Tasks with a malformed/legacy
-`group_folder` are paused to stop retry churn.
+timeout, since tasks are single-turn. A task is **paused** (status `'paused'`) to
+stop retry churn when (a) its `group_folder` is malformed/legacy, (b) its
+`schedule_value` is corrupt so the next run can't be computed (bad cron, NaN /
+out-of-range interval), or (c) it is a `once` task that errored — in each case
+the bad task stays visible for the user to fix and resume.
 
 ---
 
@@ -305,9 +320,10 @@ registered_groups), idempotent migrations, a one-time JSON-state migration, and
 typed accessors for every table.
 
 **Key exports**: `initDatabase`, `_initTestDatabase` (**test-only**),
-chat/metadata accessors (`storeChatMetadata`, `updateChatName`, `getAllChats`,
-`getLastGroupSync`, `setLastGroupSync`), message accessors (`storeMessage`,
-`getNewMessages`, `getMessagesSince`), task accessors (`createTask`,
+`buildMessageCursor` (keyset-cursor helper), chat/metadata accessors
+(`storeChatMetadata`, `updateChatName`, `getAllChats`, `getLastGroupSync`,
+`setLastGroupSync`), message accessors (`storeMessage`, `getNewMessages`,
+`getMessagesSince`), task accessors (`createTask`,
 `getTaskById`, `getTasksForGroup`, `getAllTasks`, `updateTask`, `deleteTask`,
 `getDueTasks`, `updateTaskAfterRun`, `logTaskRun`), state/session accessors
 (`getRouterState`, `setRouterState`, `getSession`, `setSession`,
@@ -322,7 +338,11 @@ chat/metadata accessors (`storeChatMetadata`, `updateChatName`, `getAllChats`,
 **Notes**: Bot messages are filtered both by the `is_bot_message` flag and a
 content-prefix backstop (for pre-migration rows). Registered-group rows with an
 invalid folder are skipped on read and rejected on write. `initDatabase` must be
-called before any accessor.
+called before any accessor. The message cursor is a `(timestamp, id)` **keyset**
+encoded as `"timestamp|id"` (built by `buildMessageCursor`) — WhatsApp
+timestamps have only second resolution, so a bare-timestamp cursor could drop a
+same-second message; `getNewMessages` returns the advanced cursor as `newCursor`
+and a bare-timestamp legacy cursor is read back exclusively (max-id sentinel).
 
 ---
 
@@ -497,5 +517,118 @@ through execution/IPC/scheduler into persistence, with `config`, `logger`,
 
 ---
 
+## Auxiliary Modules
+
+These four modules ship in the repo but run outside the orchestrator runtime:
+`skills-engine/` powers the `/customize` · `/update` · `/uninstall` skill
+lifecycle, `setup/` is the `/setup` install wizard, `scripts/` are CLI/CI
+entry points, and `container/agent-runner/` is the process that runs **inside**
+each agent container. Per-export signatures are in
+[API.md → Auxiliary modules](./API.md#auxiliary-modules).
+
+### skills-engine
+
+**Files**: 22 (`skills-engine/*.ts`). **Barrel**: `index.ts` re-exports the
+whole public surface (60 re-exports).
+
+**Responsibility**: Apply, update, rebase, customize, and uninstall "skills"
+(versioned patch bundles) on top of a pristine base snapshot kept under
+`.nanoclaw/`. Each skill declares `adds` / `modifies` / structured edits
+(`npm_dependencies`, `env_additions`, `docker_compose_services`) and `file_ops`
+in a `manifest.yaml`; the engine three-way-merges them against the base and the
+user's working tree using git, with `rerere`-backed conflict caching and a
+resolution cache so previously-resolved merges replay automatically.
+
+**Key submodules & exports**:
+- `apply.ts` → `applySkill(skillDir): Promise<ApplyResult>` — the apply
+  pipeline (manifest checks → backup → lock → merge → structured merges →
+  file-ops → state record).
+- `update.ts` → `previewUpdate(newCorePath)`, `applyUpdate(newCorePath)` — pull
+  an upstream core, preview risk, then merge + reapply skills/custom patches.
+- `rebase.ts` → `rebase(newBasePath?)`; `customize.ts` →
+  `startCustomize` / `commitCustomize` / `abortCustomize` / `isCustomizeActive`;
+  `uninstall.ts` → `uninstallSkill`; `migrate.ts` → `initSkillsSystem` /
+  `migrateExisting`; `replay.ts` → `findSkillDir` / `replaySkills`;
+  `init.ts` → `initNanoclawDir`.
+- Foundations: `state.ts` (state file + `compareSemver`, `computeFileHash`),
+  `manifest.ts` (parse + `check*` gates), `merge.ts` (git three-way merge +
+  rerere), `structured.ts` (npm/env/compose merges + `runNpmInstall`),
+  `backup.ts`, `lock.ts`, `path-remap.ts`, `resolution-cache.ts`,
+  `file-ops.ts`, `fs-utils.ts` (`toPosix`, `copyDir`), `constants.ts`,
+  `git-utils.ts`, and `types.ts` (14 interfaces, the only non-`src` type home).
+
+**Notes**: `git-utils.ts` exports `gitDiffNoIndex(args, cwd)`, which shells out
+to `git diff --no-index` to produce git-format patches.
+`customize.ts`, `migrate.ts`, and `rebase.ts` use it instead of the POSIX `diff`
+binary — git is already a hard dependency, whereas `diff` is often absent from
+PATH on Windows, where `diff`-based patches silently failed. `UpdateResult` now
+carries `deletionConflicts?: string[]`: files removed upstream that an applied
+skill / custom modification still touches are **preserved** (not deleted) so
+those edits aren't silently lost.
+
+### setup
+
+**Files**: 12 (`setup/*.ts`). **Entry**: `setup/index.ts` (the `/setup` CLI),
+which dynamically imports each step in order.
+
+**Responsibility**: Cross-platform install wizard. Each step file exports a
+`run(args)` and emits a parseable status block via `status.ts`'s `emitStatus`:
+`environment` (detect OS/Node/runtimes), `container` (build + smoke-test the
+image), `whatsapp-auth` (QR/pairing flow), `groups` (fetch + persist group
+metadata), `register` (write channel registration + group folders), `mounts`
+(write the mount allowlist), `service` (install the OS service), `verify`
+(end-to-end health check).
+
+**Key shared exports**:
+- `platform.ts` — OS/runtime detection: `getPlatform`, `isWindows`, `isWSL`,
+  `isRoot`, `isHeadless`, `hasSystemd`, `openBrowser`, `getServiceManager`,
+  `getNodePath`, `commandExists`, `getNodeVersion`, `getNodeMajorVersion`.
+- `service.ts` — `run`, plus the Windows path: `WINDOWS_TASK_NAME` (`'NanoClaw'`),
+  `generateWindowsLauncher(projectRoot, nodePath)` (restart-loop `.cmd`),
+  `windowsScheduledTaskArgs(taskName, launcherPath)` (the `schtasks /Create`
+  argv).
+- `node-script.ts` — `runNodeScript(source, opts)` runs an inline ESM snippet in
+  a throwaway file (used to call into `src/` from setup steps).
+- `status.ts` — `emitStatus(step, fields)`.
+
+**Notes**: Steps import the orchestrator's `src/config`, `src/db`,
+`src/group-folder`, and `src/logger` so registration and verification use the
+same paths/validation as the running process.
+
+### scripts
+
+**Files**: 6 (`scripts/*.ts`), all CLI entry points.
+
+**Responsibility**: Thin CLIs over `skills-engine`: `apply-skill.ts`
+(`applySkill`), `update-core.ts` (`previewUpdate` / `applyUpdate`),
+`post-update.ts` (`clearBackup`), `run-migrations.ts` (runs versioned migration
+scripts under tsx, using `compareSemver`). `generate-ci-matrix.ts` and
+`run-ci-tests.ts` build the skill-overlap CI matrix.
+
+**Key exports**: only `generate-ci-matrix.ts` exports a reusable surface —
+`extractOverlapInfo`, `computeOverlapMatrix`, `readAllManifests`,
+`generateMatrix` (interfaces `MatrixEntry`, `SkillOverlapInfo`); the other five
+scripts have no exports.
+
+### container/agent-runner
+
+**Files**: 2 (`container/agent-runner/src/*.ts`). No exports — both are
+executables that run **inside** the agent container (a separate npm package).
+
+**Responsibility**: `index.ts` is the agent process: it reads a `ContainerInput`
+JSON from stdin, drives the Claude Agent SDK `query()` loop, polls
+`/workspace/ipc/input/` for follow-up `{type:"message"}` files and the `_close`
+sentinel, and emits each `ContainerOutput` wrapped in
+`---NANOCLAW_OUTPUT_START---` / `---NANOCLAW_OUTPUT_END---` markers (these must
+match `src/container-runner.ts`). `ipc-mcp-stdio.ts` is a stdio MCP server
+exposing IPC/scheduling tools (messaging, task scheduling via `cron-parser`,
+group registration) to the in-container agent.
+
+**Notes**: This package is built separately (`npm install && npm run build` in
+`container/agent-runner`) and is required for `host` mode, where there is no
+container image to carry it.
+
+---
+
 **Document Version**: 1.1.0
-**Last Updated**: 2026-05-31
+**Last Updated**: 2026-06-01

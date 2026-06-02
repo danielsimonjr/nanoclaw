@@ -1,17 +1,16 @@
 # NanoClaw — API Reference
 
-Reference for the exported (`src/`) runtime surface of NanoClaw. For
-architecture rationale see [REQUIREMENTS.md](../REQUIREMENTS.md); for the
-machine-generated export inventory and import graph see
-[DEPENDENCY_GRAPH.md](./DEPENDENCY_GRAPH.md). This document covers the **17
-TypeScript files under `src/`** that the dependency tool scanned (85 exports
-total) and copies signatures verbatim from source.
+Reference for the exported surface of NanoClaw. For architecture rationale see
+[REQUIREMENTS.md](../REQUIREMENTS.md); for the machine-generated export inventory
+and import graph see [DEPENDENCY_GRAPH.md](./DEPENDENCY_GRAPH.md). Signatures are
+copied verbatim from source.
 
-> **Scope.** This reference documents the `src/` orchestrator runtime only.
-> The repository also contains `setup/`, `skills-engine/`, and
-> `container/agent-runner/` (the in-container agent), which run in separate
-> processes/contexts and are out of scope here. Test-only exports (the
-> `_`-prefixed functions) are documented and flagged as such.
+> **Scope.** Sections 1–16 document the `src/` orchestrator runtime (17 files
+> under `src/` + `src/channels/`) in full detail. The
+> [Auxiliary modules](#auxiliary-modules) section then covers the public exports
+> of `skills-engine/`, `setup/`, `scripts/`, and `container/agent-runner/`,
+> which run in separate processes/contexts. Test-only exports (the `_`-prefixed
+> functions) are documented and flagged as such.
 
 ---
 
@@ -33,6 +32,11 @@ total) and copies signatures verbatim from source.
 14. [router](#router)
 15. [channels/whatsapp](#channelswhatsapp)
 16. [index (entry)](#index-entry)
+17. [Auxiliary modules](#auxiliary-modules)
+    - [skills-engine](#skills-engine)
+    - [setup](#setup)
+    - [scripts](#scripts)
+    - [container/agent-runner](#containeragent-runner)
 
 ---
 
@@ -242,6 +246,20 @@ function initDatabase(): void          // Opens store/messages.db, creates schem
 function _initTestDatabase(): void     // @internal (tests only) — fresh in-memory DB
 ```
 
+### Message cursor
+
+The message cursor is a `(timestamp, id)` keyset encoded as a single string,
+`` `${timestamp}|${id}` ``. WhatsApp timestamps have only second resolution, so a
+bare `timestamp > ?` cursor can drop a same-second message that arrives after the
+cursor advances; the `(timestamp, id)` keyset makes it unambiguous. A bare
+timestamp (legacy/fresh cursor) is read back exclusively via a max-id sentinel,
+so upgrades neither reprocess nor drop.
+
+```typescript
+const buildMessageCursor: (timestamp: string, id: string) => string
+// Returns `${timestamp}|${id}`.
+```
+
 ### Chats / metadata
 
 ```typescript
@@ -273,15 +291,16 @@ function storeMessage(msg: NewMessage): void   // INSERT OR REPLACE; call only f
 
 function getNewMessages(
   jids: string[],
-  lastTimestamp: string,
+  lastCursor: string,            // keyset cursor "timestamp|id" (or a bare/empty legacy timestamp)
   botPrefix: string,
-): { messages: NewMessage[]; newTimestamp: string }
-// Returns messages newer than lastTimestamp across jids, excluding bot messages
-// (is_bot_message flag AND content NOT LIKE "<botPrefix>:%"), with the advanced timestamp.
+): { messages: NewMessage[]; newCursor: string }
+// Returns messages after lastCursor across jids, ordered by (timestamp, id) and
+// excluding bot messages (is_bot_message flag AND content NOT LIKE "<botPrefix>:%")
+// and empty content. newCursor is the keyset of the last row (or lastCursor if none).
 
 function getMessagesSince(
   chatJid: string,
-  sinceTimestamp: string,
+  sinceCursor: string,           // keyset cursor "timestamp|id" (or a bare/empty legacy timestamp)
   botPrefix: string,
 ): NewMessage[]
 ```
@@ -772,7 +791,10 @@ class WhatsAppChannel implements Channel {
 Notes: emits chat metadata for every chat (group discovery) but delivers full
 messages only for registered groups; prefixes outbound text with
 `<ASSISTANT_NAME>:` unless `ASSISTANT_HAS_OWN_NUMBER`; translates `@lid` JIDs to
-phone JIDs.
+phone JIDs. Before reconnecting, `connect()` tears down the old socket
+(`removeAllListeners` on `connection.update` / `creds.update` /
+`messages.upsert`, then `sock.end()`) so reconnect loops don't leak sockets or
+double-deliver messages.
 
 ---
 
@@ -790,3 +812,252 @@ function getAvailableGroups(): AvailableGroup[]
 function _setRegisteredGroups(groups: Record<string, RegisteredGroup>): void
 // @internal — exported for testing; overwrites the in-memory registeredGroups map.
 ```
+
+---
+
+## Auxiliary modules
+
+The orchestrator-runtime sections above cover `src/`. The modules below run in
+separate processes/contexts: `skills-engine/` (skill lifecycle), `setup/` (the
+`/setup` wizard), `scripts/` (CLIs), and `container/agent-runner/` (the
+in-container agent). Signatures are verbatim from source; many helpers are
+omitted for brevity — see the `skills-engine/index.ts` barrel and
+`skills-engine/types.ts` for the complete list.
+
+### skills-engine
+
+`skills-engine/` — 22 files; `skills-engine/index.ts` is a barrel that
+re-exports the full public surface (60 re-exports). Skills are versioned patch
+bundles (`manifest.yaml` with `adds` / `modifies` / structured edits /
+`file_ops`) merged onto a pristine base snapshot under `.nanoclaw/` using
+git-based three-way merges with `rerere` and a resolution cache.
+
+#### Public entry points
+
+```typescript
+// apply.ts
+function applySkill(skillDir: string): Promise<ApplyResult>
+
+// update.ts — pull/merge an upstream core, reapply skills + custom patches
+function previewUpdate(newCorePath: string): UpdatePreview
+function applyUpdate(newCorePath: string): Promise<UpdateResult>
+
+// rebase.ts — bake current state into a new base snapshot
+function rebase(newBasePath?: string): Promise<RebaseResult>
+
+// customize.ts — bracket manual edits so they become a tracked custom patch
+function isCustomizeActive(): boolean
+function startCustomize(description: string): void
+function commitCustomize(): void
+function abortCustomize(): void
+
+// uninstall.ts — remove a skill and replay the rest
+function uninstallSkill(skillName: string): Promise<UninstallResult>
+
+// migrate.ts
+function initSkillsSystem(): void
+function migrateExisting(): void
+
+// init.ts
+function initNanoclawDir(): void
+
+// replay.ts
+function findSkillDir(skillName: string, projectRoot?: string): string | null
+function replaySkills(options: ReplayOptions): Promise<ReplayResult>
+```
+
+```typescript
+interface ReplayOptions {
+  skills: string[];
+  skillDirs: Record<string, string>;
+  projectRoot?: string;
+}
+interface ReplayResult {
+  success: boolean;
+  perSkill: Record<string, { success: boolean; error?: string }>;
+  mergeConflicts?: string[];
+  error?: string;
+}
+```
+
+#### git-utils
+
+```typescript
+// git-utils.ts
+function gitDiffNoIndex(args: string[], cwd: string): string
+// Runs `git diff --no-index -- <args>` (paths resolved relative to cwd) and
+// returns the unified/git-format patch ('' when identical). Used by customize.ts,
+// migrate.ts, and rebase.ts instead of the POSIX `diff` binary, which is often
+// absent from PATH on Windows. Exit status 1 (= differences found) is normal and
+// returns the patch on stdout; any other non-zero status throws.
+```
+
+#### Foundation helpers (selected)
+
+```typescript
+// state.ts — the .nanoclaw/state.yaml accessors
+function readState(): SkillState
+function writeState(state: SkillState): void
+function getAppliedSkills(): AppliedSkill[]
+function getCustomModifications(): CustomModification[]
+function recordSkillApplication(/* … */): void
+function recordCustomModification(/* … */): void
+function computeFileHash(filePath: string): string   // SHA-256 hex of file contents
+function compareSemver(a: string, b: string): number // <0 / 0 / >0
+
+// manifest.ts
+function readManifest(skillDir: string): SkillManifest
+function checkCoreVersion(manifest: SkillManifest): { /* compatibility result */ }
+function checkDependencies(manifest: SkillManifest): { /* … */ }
+function checkSystemVersion(manifest: SkillManifest): { /* … */ }
+function checkConflicts(manifest: SkillManifest): { /* … */ }
+
+// merge.ts — git three-way merge + rerere
+function isGitRepo(): boolean
+function mergeFile(currentPath: string, basePath: string, /* … */): MergeResult
+function setupRerereAdapter(/* … */): /* … */
+function runRerere(filePath: string): boolean
+function cleanupMergeState(filePath?: string): void
+
+// structured.ts — structured-edit merges
+function areRangesCompatible(existing: string, /* … */): boolean
+function mergeNpmDependencies(/* … */): /* … */
+function mergeEnvAdditions(/* … */): /* … */
+function mergeDockerComposeServices(/* … */): /* … */
+function runNpmInstall(): void
+
+// fs-utils.ts
+function toPosix(p: string): string
+function copyDir(src: string, dest: string, excludes?: string[]): void
+
+// file-ops.ts
+function executeFileOps(/* … */): FileOpsResult
+
+// path-remap.ts
+function resolvePathRemap(/* … */): string
+function loadPathRemap(): Record<string, string>
+function recordPathRemap(remap: Record<string, string>): void
+
+// backup.ts
+function createBackup(filePaths: string[]): void
+function restoreBackup(): void
+function clearBackup(): void
+
+// lock.ts
+function acquireLock(): () => void  // returns a release fn
+function releaseLock(): void
+function isLocked(): boolean
+
+// resolution-cache.ts
+function findResolutionDir(/* … */): string | null
+function loadResolutions(/* … */): /* … */
+function saveResolution(/* … */): void
+function clearAllResolutions(projectRoot: string): void
+```
+
+`constants.ts` exports path/version constants (`NANOCLAW_DIR`, `STATE_FILE`,
+`BASE_DIR`, `BACKUP_DIR`, `LOCK_FILE`, `CUSTOM_DIR`, `RESOLUTIONS_DIR`,
+`SHIPPED_RESOLUTIONS_DIR`, `SKILLS_SCHEMA_VERSION`, `BASE_INCLUDES`,
+`BASE_EXCLUDES`). `types.ts` defines all 14 skills-engine interfaces
+(`SkillManifest`, `SkillState`, `AppliedSkill`, `ApplyResult`, `MergeResult`,
+`FileOperation`, `FileOpsResult`, `CustomModification`, `FileInputHashes`,
+`ResolutionMeta`, `UpdatePreview`, `UpdateResult`, `UninstallResult`,
+`RebaseResult`).
+
+`UpdateResult` carries a `deletionConflicts?: string[]` field — files removed
+upstream that an applied skill / custom modification still modifies are
+preserved (not deleted) so those changes aren't silently lost:
+
+```typescript
+interface UpdateResult {
+  success: boolean;
+  previousVersion: string;
+  newVersion: string;
+  mergeConflicts?: string[];
+  backupPending?: boolean;
+  customPatchFailures?: string[];
+  skillReapplyResults?: Record<string, boolean>;
+  deletionConflicts?: string[];  // upstream-deleted files still modified by a skill/custom mod
+  error?: string;
+}
+```
+
+### setup
+
+`setup/` — 12 files. `setup/index.ts` is the `/setup` CLI; each step file
+(`environment`, `container`, `whatsapp-auth`, `groups`, `register`, `mounts`,
+`service`, `verify`) exports `run(args: string[]): Promise<void>` and reports
+progress via `emitStatus`.
+
+```typescript
+// status.ts
+function emitStatus(
+  step: string,
+  fields: Record<string, string | number | boolean>,
+): void
+// Prints a "=== NANOCLAW SETUP: <step> ===" … "=== END ===" block.
+
+// node-script.ts
+function runNodeScript(
+  source: string,
+  opts?: { cwd?: string; timeout?: number },
+): string
+// Writes `source` to a throwaway .mjs under cwd, runs it with the current node,
+// returns stdout (used to call into src/ from setup steps).
+```
+
+```typescript
+// platform.ts — cross-platform detection
+function getPlatform(): Platform                 // type Platform = 'macos' | 'linux' | 'windows' | 'unknown'
+function isWindows(): boolean
+function isWSL(): boolean
+function isRoot(): boolean
+function isHeadless(): boolean
+function hasSystemd(): boolean
+function openBrowser(url: string): boolean
+function getServiceManager(): ServiceManager     // type ServiceManager = 'launchd' | 'systemd' | 'schtasks' | 'none'
+function getNodePath(): string
+function commandExists(name: string): boolean
+function getNodeVersion(): string | null
+function getNodeMajorVersion(): number | null
+```
+
+```typescript
+// service.ts — install the OS service (also exports the step `run`)
+const WINDOWS_TASK_NAME: string  // 'NanoClaw'
+function generateWindowsLauncher(projectRoot: string, nodePath: string): string
+// Restart-loop `.cmd` launcher (win32 paths, CRLF) the scheduled task runs at logon.
+function windowsScheduledTaskArgs(taskName: string, launcherPath: string): string[]
+// argv for `schtasks /Create … /SC ONLOGON /RL LIMITED`.
+```
+
+### scripts
+
+`scripts/` — 6 CLI entry points. Five (`apply-skill.ts`, `update-core.ts`,
+`post-update.ts`, `run-migrations.ts`, `run-ci-tests.ts`) have no exports — they
+wrap `skills-engine`. Only `generate-ci-matrix.ts` exports a reusable surface for
+the skill-overlap CI matrix:
+
+```typescript
+interface MatrixEntry { skills: string[]; reason: string }
+interface SkillOverlapInfo { name: string; modifies: string[]; npmDependencies: string[] }
+
+function extractOverlapInfo(manifest: SkillManifest, dirName: string): SkillOverlapInfo
+function computeOverlapMatrix(skills: SkillOverlapInfo[]): MatrixEntry[]
+function readAllManifests(skillsDir: string): { manifest: SkillManifest; dirName: string }[]
+function generateMatrix(skillsDir: string): MatrixEntry[]
+```
+
+### container/agent-runner
+
+`container/agent-runner/src/` — 2 files, **no exports** (executables that run
+inside the agent container, a separate npm package).
+
+- `index.ts` — the agent process. Reads a `ContainerInput` JSON from stdin,
+  drives the Claude Agent SDK `query()` loop, polls `/workspace/ipc/input/` for
+  follow-up `{ type: "message", text }` files and the `_close` sentinel, and
+  emits each `ContainerOutput` wrapped in `---NANOCLAW_OUTPUT_START---` /
+  `---NANOCLAW_OUTPUT_END---` markers (must match `src/container-runner.ts`).
+- `ipc-mcp-stdio.ts` — a stdio MCP server (`@modelcontextprotocol/sdk`) exposing
+  IPC/scheduling tools (messaging, task scheduling via `cron-parser`, group
+  registration) to the in-container agent.

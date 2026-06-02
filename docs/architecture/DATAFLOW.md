@@ -1,6 +1,6 @@
 # NanoClaw — Data Flow Documentation
 
-**Last Updated**: 2026-05-31
+**Last Updated**: 2026-06-01
 
 ---
 
@@ -71,9 +71,9 @@ sequenceDiagram
     CH->>DB: storeChatMetadata (all chats)
 
     loop every POLL_INTERVAL
-        ML->>DB: getNewMessages(jids, lastTimestamp)
-        DB-->>ML: {messages, newTimestamp}
-        ML->>ML: advance lastTimestamp cursor, saveState()
+        ML->>DB: getNewMessages(jids, lastTimestamp, ASSISTANT_NAME)
+        DB-->>ML: {messages, newCursor}  // newCursor = "timestamp|id"
+        ML->>ML: advance lastTimestamp = newCursor, saveState()
         ML->>ML: deduplicate by group JID
         ML->>ML: check trigger pattern (non-main groups)
 
@@ -86,8 +86,8 @@ sequenceDiagram
     end
 
     GQ->>PG: processGroupMessages(chatJid)
-    PG->>DB: getMessagesSince(chatJid, lastAgentTimestamp)
-    PG->>PG: advance lastAgentTimestamp cursor, saveState()
+    PG->>DB: getMessagesSince(chatJid, lastAgentTimestamp[jid], ASSISTANT_NAME)
+    PG->>PG: advance lastAgentTimestamp = buildMessageCursor(ts,id), saveState()
     PG->>CR: runContainerAgent(group, input, onProcess, onOutput)
 
     CR->>CR: buildVolumeMounts(group, isMain)
@@ -124,9 +124,11 @@ The Baileys socket fires `messages.upsert`. For every incoming message the chann
 
 **2. Message loop polls** (`src/index.ts`, `startMessageLoop`)
 
-Every `POLL_INTERVAL` milliseconds the loop calls `getNewMessages(jids, lastTimestamp)`. This issues a single SQL query that returns only non-bot messages (`is_bot_message = 0`) newer than the cursor. The cursor (`lastTimestamp`) is advanced and saved to `router_state` before any group processing, so a crash between the cursor advance and processing is recovered by `recoverPendingMessages` on next startup.
+Every `POLL_INTERVAL` milliseconds the loop calls `getNewMessages(jids, lastTimestamp, ASSISTANT_NAME)`. This issues a single SQL query that returns only non-bot messages (`is_bot_message = 0`, plus a content-prefix backstop) newer than the cursor.
 
-Messages are grouped by JID. For non-main groups that require a trigger word, the batch is only acted on if at least one message matches `TRIGGER_PATTERN`. When a trigger is present, `getMessagesSince(chatJid, lastAgentTimestamp[chatJid])` pulls the full context window, not just the triggering batch.
+**The cursor is a `(timestamp, id)` keyset, not a bare timestamp.** `buildMessageCursor(timestamp, id)` encodes it as the string `"timestamp|id"`, and the query advances strictly with `WHERE timestamp > ? OR (timestamp = ? AND id > ?)` over an `ORDER BY timestamp, id` result. This replaced the old `timestamp > ?` comparison, which silently dropped any second message that landed in the same whole-second timestamp as the cursor (WhatsApp timestamps have second granularity). `parseCursor` is backward-compatible: a legacy bare-timestamp value (no `|`) is treated as `{ ts, id: '￿' }`, a max-id sentinel that reproduces the old exclusive-at-that-timestamp behavior, so the upgrade neither reprocesses nor drops. The new cursor (`router_state.last_timestamp`) is advanced and saved before any group processing, so a crash between the cursor advance and processing is recovered by `recoverPendingMessages` on next startup.
+
+Messages are grouped by JID. For non-main groups that require a trigger word, the batch is only acted on if at least one message matches `TRIGGER_PATTERN`. When a trigger is present, `getMessagesSince(chatJid, lastAgentTimestamp[chatJid], ASSISTANT_NAME)` pulls the full context window (using the same keyset comparison), not just the triggering batch.
 
 If an active container already exists for the group, `queue.sendMessage` writes a JSON file to the group's `ipc/<group>/input/` directory. If no container is running, `queue.enqueueMessageCheck` is called.
 
@@ -136,7 +138,7 @@ If an active container already exists for the group, `queue.sendMessage` writes 
 
 **4. processGroupMessages runs the agent** (`src/index.ts`, `processGroupMessages`)
 
-This function is the queue's `processMessagesFn`. It calls `getMessagesSince` (the authoritative context query using `lastAgentTimestamp`, not `lastTimestamp`), formats messages with `formatMessages`, advances `lastAgentTimestamp`, then calls `runAgent`. An idle timer (`IDLE_TIMEOUT`) starts after each streaming result; when it fires, `queue.closeStdin` writes a `_close` sentinel to `ipc/<group>/input/`. On agent error, the cursor is rolled back unless output has already been sent (to prevent duplicate messages on retry).
+This function is the queue's `processMessagesFn`. It calls `getMessagesSince` (the authoritative context query keyed on the per-group `lastAgentTimestamp[chatJid]` keyset cursor, not the global `lastTimestamp`), formats messages with `formatMessages`, then advances `lastAgentTimestamp[chatJid] = buildMessageCursor(lastMsg.timestamp, lastMsg.id)` (saving the previous value so it can be restored on error), then calls `runAgent`. An idle timer (`IDLE_TIMEOUT`) starts after each streaming result; when it fires, `queue.closeStdin` writes a `_close` sentinel to `ipc/<group>/input/`. On agent error, the cursor is rolled back to `previousCursor` unless output has already been sent (to prevent duplicate messages on retry).
 
 **5. Container is spawned and driven** (`src/container-runner.ts`, `runContainerAgent` → `driveAgentProcess`)
 
@@ -153,6 +155,8 @@ Inside the container, `readStdin()` reads the full `ContainerInput`. Secrets are
 **7. Reply is sent** (`src/index.ts`, `processGroupMessages` streaming callback)
 
 The `onOutput` callback in `processGroupMessages` strips `<internal>...</internal>` blocks from the result text and calls `channel.sendMessage(chatJid, text)`. In `WhatsAppChannel.sendMessage`, if the socket is connected the message goes out immediately via `sock.sendMessage`; if not, it is pushed to `outgoingQueue` and flushed by `flushOutgoingQueue` on reconnect.
+
+On a `connection: 'close'` event (where the disconnect reason is not `loggedOut`), `connectInternal` is re-entered to reconnect. Before building the new `WASocket` it **tears down the old one**: `removeAllListeners` for `connection.update` / `creds.update` / `messages.upsert`, then `sock.end()`. Without this, every reconnect leaked a socket plus its listeners and overlapping sockets could deliver duplicate inbound messages; removing the old listeners first also stops the stale socket's own `close` handler from firing during `end()`.
 
 ---
 
@@ -268,8 +272,13 @@ sequenceDiagram
     GQ->>GQ: closeStdin → _close sentinel
 
     RT->>DB: logTaskRun(taskId, duration, status, result)
-    RT->>DB: updateTaskAfterRun(taskId, nextRun)
-    note over DB: cron/interval: nextRun computed<br/>once: status → 'completed'
+    alt valid schedule
+        RT->>DB: updateTaskAfterRun(taskId, nextRun, summary)
+        note over DB: cron/interval: nextRun computed<br/>once: status → 'completed'
+    else bad schedule_value / once errored
+        RT->>DB: updateTask(taskId, status='paused')
+        note over DB: stops re-enqueue churn;<br/>bad value stays visible
+    end
 ```
 
 ### Walk-Through
@@ -294,7 +303,9 @@ Tasks use the same `GroupQueue` as message-triggered runs. If a container is alr
 
 The `ContainerInput` is constructed with `isScheduledTask: true`. The agent-runner prepends a `[SCHEDULED TASK]` header to the prompt so Claude knows it is not responding to a live user. `context_mode` controls whether the group's current session ID is passed (`group` mode) or a fresh session is used (`isolated` mode).
 
-A `TASK_CLOSE_DELAY_MS` (10 s) close timer is scheduled after the first result arrives; this is shorter than the full `IDLE_TIMEOUT` (default 30 min) because tasks are single-turn. After the agent exits, `logTaskRun` records the outcome and `updateTaskAfterRun` sets the next `next_run` timestamp (cron and interval tasks) or transitions the status to `completed` (once tasks).
+A `TASK_CLOSE_DELAY_MS` (10 s) close timer is scheduled after the first result arrives; this is shorter than the full `IDLE_TIMEOUT` (default 30 min) because tasks are single-turn. After the agent exits, `logTaskRun` records the outcome and the next `next_run` is computed: cron via `CronExpressionParser.parse(...).next()`, interval via `Date.now() + ms`, and `once` tasks transition to `completed`.
+
+**Bad schedules pause the task instead of churning.** Computing the next run is wrapped in try/catch: a corrupt or legacy `schedule_value` (e.g. a non-numeric interval, or an interval whose next run overflows the max valid `Date`) would otherwise throw out of `runTask`, skip `updateTaskAfterRun`, leave `next_run` stale, and make the scheduler re-enqueue the same task on every poll forever. On any such failure the task is set to `status: 'paused'` and `runTask` returns early, so the churn stops and the bad value is visible to the user. Two related guards: a task whose `group_folder` no longer resolves to a valid path is also paused (malformed legacy rows), and a `once` task that errored is paused rather than silently marked `completed` so the failure stays visible and resumable.
 
 ---
 

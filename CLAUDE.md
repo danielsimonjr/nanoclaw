@@ -17,9 +17,13 @@ Single Node.js process that connects to WhatsApp, routes messages to Claude Agen
 | `src/config.ts` | Trigger pattern, paths, intervals |
 | `src/container-runner.ts` | Spawns agent containers with mounts |
 | `src/task-scheduler.ts` | Runs scheduled tasks |
-| `src/db.ts` | SQLite operations |
+| `src/db.ts` | SQLite ops; messages use a `(timestamp,id)` keyset cursor (`buildMessageCursor`) |
+| `src/container-runtime.ts` | Runtime abstraction (docker/podman/container/host), orphan cleanup |
+| `container/agent-runner/src/index.ts` | In-container agent runner (Claude Agent SDK driver) |
+| `container/agent-runner/src/ipc-mcp-stdio.ts` | Agent-side MCP server (send_message, schedule_task, etc.) |
+| `skills-engine/` | Skill apply/update/rebase engine (git-based patches via `git-utils.ts`) |
 | `groups/{name}/CLAUDE.md` | Per-group memory (isolated) |
-| `container/skills/agent-browser.md` | Browser automation tool (available to all agents via Bash) |
+| `container/skills/agent-browser/SKILL.md` | Browser automation tool (available to all agents via Bash) |
 
 ## Skills
 
@@ -35,13 +39,16 @@ Single Node.js process that connects to WhatsApp, routes messages to Claude Agen
 Run commands directly—don't tell the user to run them.
 
 ```bash
-npm run dev          # Run with hot reload
-npm run build        # Compile TypeScript
-./container/build.sh # Rebuild agent container (macOS/Linux/WSL)
-container\build.cmd  # Rebuild agent container (native Windows)
+npm run dev          # Run orchestrator with hot reload (tsx src/index.ts)
+npm run build        # Compile orchestrator TypeScript (tsc)
+npm run build:agent  # Build the in-container agent-runner (npm install + build in container/agent-runner)
+npm test             # Run vitest (src/, setup/, skills-engine/)
+npm run typecheck    # Typecheck src + setup; typecheck:agent for the agent-runner
+./container/build.sh # Rebuild agent container image (macOS/Linux/WSL)
+container\build.cmd  # Rebuild agent container image (native Windows)
 ```
 
-Container runtime is selected via `CONTAINER_RUNTIME` (`auto` default, or `docker`/`podman`/`container`/`host`). `host` runs the agent without a sandbox and requires `container/agent-runner` to be built (`npm install && npm run build` there). Runtime abstraction lives in `src/container-runtime.ts`.
+Container runtime is selected via `CONTAINER_RUNTIME` (`auto` default, or `docker`/`podman`/`container`/`host`). `host` runs the agent without a sandbox and requires the agent-runner to be built first via `npm run build:agent`. Runtime abstraction lives in `src/container-runtime.ts`.
 
 Service management:
 ```bash
