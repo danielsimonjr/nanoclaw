@@ -1,6 +1,6 @@
 # NanoClaw
 
-Personal Claude assistant. See [README.md](README.md) for philosophy and setup. See [docs/REQUIREMENTS.md](docs/REQUIREMENTS.md) for architecture decisions.
+Personal Claude assistant. See [README.md](README.md) for philosophy and setup. See [docs/REQUIREMENTS.md](docs/REQUIREMENTS.md) for architecture decisions. In-depth, graph-backed architecture docs live in [docs/architecture/](docs/architecture/) (regenerate the dependency/coverage reports with `npx tsx tools/create-dependency-graph/create-dependency-graph.ts --include-tests`).
 
 ## Quick Context
 
@@ -41,7 +41,7 @@ Run commands directly—don't tell the user to run them.
 ```bash
 npm run dev          # Run orchestrator with hot reload (tsx src/index.ts)
 npm run build        # Compile orchestrator TypeScript (tsc)
-npm run build:agent  # Build the in-container agent-runner (npm install + build in container/agent-runner)
+npm run build:agent  # Build the in-container agent-runner (npm ci + build in container/agent-runner)
 npm test             # Run vitest (src/, setup/, skills-engine/)
 npm run typecheck    # Typecheck src + setup; typecheck:agent for the agent-runner
 ./container/build.sh # Rebuild agent container image (macOS/Linux/WSL)
