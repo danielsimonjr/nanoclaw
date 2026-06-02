@@ -11,7 +11,7 @@
     "auth": "tsx src/whatsapp-auth.ts",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.setup.json",
     "typecheck:agent": "tsc --noEmit -p container/agent-runner/tsconfig.json",
-    "build:agent": "npm --prefix container/agent-runner install && npm --prefix container/agent-runner run build",
+    "build:agent": "npm --prefix container/agent-runner ci && npm --prefix container/agent-runner run build",
     "format": "prettier --write \"src/**/*.ts\" \"setup/**/*.ts\" \"skills-engine/**/*.ts\" \"container/agent-runner/src/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\" \"setup/**/*.ts\" \"skills-engine/**/*.ts\" \"container/agent-runner/src/**/*.ts\"",
     "setup": "tsx setup/index.ts",
