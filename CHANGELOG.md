@@ -7,8 +7,17 @@ does not strictly follow semantic versioning (it is a personal fork).
 ## [Unreleased]
 
 A Windows 10/11 compatibility + stability hardening pass. The full test suite is
-476 tests across 44 files (0 circular dependencies, 0 npm-audit vulnerabilities);
-the dependency tool now maps all first-party source.
+476 tests across 44 files (0 circular dependencies; 1 low-severity dev-only
+npm-audit advisory remaining — the `esbuild` dev-server file-read issue, which
+this project does not use); the dependency tool now maps all first-party source.
+
+### Security
+
+- **Patched the moderate `protobufjs` advisory** (GHSA-f38q-mgvj-vph7 — schema
+  -derived names shadowing runtime-significant properties), a transitive
+  dependency via `@whiskeysockets/baileys`, by bumping it to 7.6.4 through
+  `npm audit fix` (lockfile-only). Typecheck and all 476 tests still pass. The
+  remaining `esbuild` advisory is dev-server-only and not applicable here.
 
 ### Added
 
