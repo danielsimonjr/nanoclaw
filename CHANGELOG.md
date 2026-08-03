@@ -6,6 +6,42 @@ does not strictly follow semantic versioning (it is a personal fork).
 
 ## [Unreleased]
 
+### Security — all 7 open Dependabot alerts resolved, lock-only (2026-08-03)
+
+Every fix landed inside the existing semver ranges, so no manifest changed.
+
+Root `package-lock.json`:
+
+- `postcss` 8.5.15 -> 8.5.25 (high, GHSA needs 8.5.18) — via `vite ^8.5.15`
+- `sharp` 0.34.5 -> 0.35.3 (high, needs 0.35.0), with all 25 `@img/*`
+  platform binaries and libvips 1.2.4 -> 1.3.2
+- `protobufjs` 7.6.4 -> 7.6.5 (medium) — via `@whiskeysockets/baileys`
+
+`container/agent-runner/package-lock.json`:
+
+- `fast-uri` 3.1.2 -> 3.1.5 (two high alerts, needs 3.1.3 and 3.1.4)
+- `body-parser` 2.2.2 -> 2.3.0 (low)
+- `@hono/node-server` 1.19.14 -> 2.0.12 (medium, needs 2.0.5)
+
+The hono fix needed an indirection: `@modelcontextprotocol/sdk` pinned
+`@hono/node-server` to `^1.19.9`, so no in-range update could reach 2.x.
+SDK 1.30.0 widened that to `^1.19.9 || ^2.0.5` and is itself inside the
+existing `^1.12.1` range, so updating the SDK 1.26.0 -> 1.30.0 unlocked the
+hono major without a manifest edit.
+
+Verified: `npm audit` reports 0 vulnerabilities in both projects;
+`npm run typecheck` and `npm run build` pass at the root; `npm ci` +
+`tsc` pass in `container/agent-runner` (the exact commands `build:agent`
+runs) on hono 2.x; and `sharp` 0.35.3 loads reporting libvips 8.18.3.
+
+Not verified locally: 92 of 476 vitest cases could not execute on this
+machine. All 92 fail with a single cause — `better-sqlite3` 11.10.0 ships
+no prebuilt binary for Node 24 (ABI v137), and node-gyp cannot find a
+usable MSVC toolchain here, so the addon is absent. `better-sqlite3` is
+untouched by this change and CI runs Node 20, where the prebuild exists.
+The other 384 cases pass.
+
+
 A Windows 10/11 compatibility + stability hardening pass. The full test suite is
 476 tests across 44 files (0 circular dependencies; 1 low-severity dev-only
 npm-audit advisory remaining — the `esbuild` dev-server file-read issue, which
