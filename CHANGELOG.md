@@ -6,6 +6,20 @@ does not strictly follow semantic versioning (it is a personal fork).
 
 ## [Unreleased]
 
+### Security (2026-08-04)
+
+Lock-only via `npm update`; no manifest changed. Transitive dependencies of the
+MCP SDK / server stack:
+
+- `ip-address` -> 10.4.0 (1 high + 2 medium; needed 10.3.1)
+- `hono` -> 4.13.0 (medium; needed 4.12.34)
+- `fast-uri` -> 3.1.5 (high; needed 3.1.5)
+
+Only the packages present in this repo's tree are listed above by the resolver;
+`npm audit` reports 0 vulnerabilities. Verified with `npm ci` plus this repo's
+own build and test scripts.
+
+
 ### Security — all 7 open Dependabot alerts resolved, lock-only (2026-08-03)
 
 Every fix landed inside the existing semver ranges, so no manifest changed.
