@@ -1,14 +1,18 @@
 name: Test
 
 on:
+  # `push` gates main. Work here lands by DIRECT PUSH to main, so a `pull_request`
+  # trigger alone gated nothing: this workflow had never run once and main was
+  # completely unchecked.
+  push:
+    branches: [main]
   pull_request:
     branches: [main]
-  # Manual trigger, added ahead of a `push` trigger on purpose. This workflow has
-  # never run once: the trigger was `pull_request` only, and work lands by direct
-  # push to main, so main has been completely ungated. Wiring `push` straight away
-  # would have published whatever this matrix does on first contact as a required-
-  # looking check on main - and a check that is red on every run trains everyone to
-  # skim past red. Dispatch first, read the result, then gate.
+  # Kept for re-measuring the matrix without a commit. It earned its place: the
+  # concern that blocked this change was that node 24 would fail because
+  # better-sqlite3 11.10.0 ships no prebuild for it. Dispatched before wiring
+  # `push`, all 12 jobs passed - node 24 included, on ubuntu AND windows. The
+  # hypothesis was never tested, only repeated.
   workflow_dispatch:
 
 jobs:

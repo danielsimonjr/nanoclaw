@@ -6,6 +6,20 @@ does not strictly follow semantic versioning (it is a personal fork).
 
 ## [Unreleased]
 
+### CI (2026-08-14)
+
+`Test` now gates `main` on `push`, not only on `pull_request`.
+
+Work lands here by direct push to `main`, so a `pull_request`-only trigger gated
+nothing at all: the workflow had **never run once** and `main` was completely
+unchecked. `workflow_dispatch` was added first and kept, so the matrix can be
+re-measured without a commit.
+
+The change had been held back on the theory that node 24 would fail, because the
+pinned `better-sqlite3` 11.10.0 ships no prebuild for it. Dispatched before
+wiring `push`: **all 12 jobs passed**, node 24 included, on ubuntu *and* windows.
+The hypothesis had been repeated but never tested.
+
 ### Security (2026-08-04)
 
 Lock-only via `npm update`; no manifest changed. Transitive dependencies of the
