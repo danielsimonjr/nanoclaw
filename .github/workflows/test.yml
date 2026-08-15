@@ -3,6 +3,13 @@ name: Test
 on:
   pull_request:
     branches: [main]
+  # Manual trigger, added ahead of a `push` trigger on purpose. This workflow has
+  # never run once: the trigger was `pull_request` only, and work lands by direct
+  # push to main, so main has been completely ungated. Wiring `push` straight away
+  # would have published whatever this matrix does on first contact as a required-
+  # looking check on main - and a check that is red on every run trains everyone to
+  # skim past red. Dispatch first, read the result, then gate.
+  workflow_dispatch:
 
 jobs:
   test:
