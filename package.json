@@ -16,7 +16,9 @@
     "format:check": "prettier --check \"src/**/*.ts\" \"setup/**/*.ts\" \"skills-engine/**/*.ts\" \"container/agent-runner/src/**/*.ts\"",
     "setup": "tsx setup/index.ts",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "postinstall": "node scripts/rebuild-native.mjs",
+    "rebuild:native": "node scripts/rebuild-native.mjs"
   },
   "dependencies": {
     "@whiskeysockets/baileys": "^7.0.0-rc.9",
