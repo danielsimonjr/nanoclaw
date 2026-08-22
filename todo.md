@@ -54,3 +54,28 @@ re-discovered as "new."
 - If `npm run build:agent` ever dirties the tree again, a stale
   `container/agent-runner/node_modules/nanoclaw` symlink is back — `npm ci`
   (which the script now uses) clears it.
+
+## 2026-08-22 — five-axis pass (Bun migration)
+
+Assessed on speed · stability · reliability · security · maintainability while migrating
+the package manager and test driver to Bun.
+
+- **Stability — UNRESOLVED, recorded rather than dismissed.** One run of the suite
+  reported `1 failed | 475 passed (476)`. I did not capture which test failed, and
+  **six subsequent runs are all 476/476** (3 plain, 2 after `bun run build`, 1 later).
+  I can neither reproduce nor name it. In this workspace every investigated "flaky test"
+  has turned out to be a REAL bug, so this is logged as an open defect, NOT as noise.
+  If it recurs, capture the full reporter output on the FIRST failure — losing it is
+  what made this unresolvable.
+- **Maintainability — fixed.** `format:check` was failing on 3 files
+  (`src/db.ts`, `skills-engine/uninstall.ts`, `skills-engine/update.ts`) with
+  pre-existing drift, unrelated to the migration. This went unnoticed because **this
+  repo's Actions are disabled**, so no gate has run on a push; a disabled gate is how
+  drift accumulates invisibly. Reformatted (union-type line wrapping only, no semantic
+  change).
+- **Reliability — unverifiable here.** CI cannot verify this repo until Actions are
+  enabled. Every rewritten CI command was therefore exercised locally instead:
+  `bun install --frozen-lockfile`, `bun run typecheck`, `bun run format:check`,
+  `bun run build`, `bun run test` — all exit 0.
+- **Speed / Security — not assessed.** Out of scope for a package-manager change; no
+  claim made either way.

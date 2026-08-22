@@ -158,8 +158,7 @@ export async function uninstallSkill(
     for (const skill of state.applied_skills) {
       if (skill.name === skillName) continue;
       const outcomes = skill.structured_outcomes as
-        | Record<string, unknown>
-        | undefined;
+        Record<string, unknown> | undefined;
       if (!outcomes?.test) continue;
 
       try {
