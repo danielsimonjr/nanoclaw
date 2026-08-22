@@ -35,7 +35,7 @@ jobs:
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version: '1.4.0'
-      - run: npm ci
+      - run: bun install --frozen-lockfile
       - run: bun run typecheck
       # Prettier was a defined-but-unwired script; enforce it so style/EOL drift
       # can't return. Passes on a fresh checkout (.gitattributes pins eol=lf).
@@ -65,7 +65,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
-      - run: npm ci
+      - run: bun install --frozen-lockfile
       - run: bun run test
 
   # The container-side agent-runner is a separate npm package with its own
@@ -87,7 +87,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
-      - run: npm ci
+      - run: bun install --frozen-lockfile
         working-directory: container/agent-runner
       - run: bun run build
         working-directory: container/agent-runner
