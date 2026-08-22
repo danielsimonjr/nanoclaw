@@ -60,13 +60,17 @@ re-discovered as "new."
 Assessed on speed · stability · reliability · security · maintainability while migrating
 the package manager and test driver to Bun.
 
-- **Stability — UNRESOLVED, recorded rather than dismissed.** One run of the suite
-  reported `1 failed | 475 passed (476)`. I did not capture which test failed, and
-  **six subsequent runs are all 476/476** (3 plain, 2 after `bun run build`, 1 later).
-  I can neither reproduce nor name it. In this workspace every investigated "flaky test"
-  has turned out to be a REAL bug, so this is logged as an open defect, NOT as noise.
-  If it recurs, capture the full reporter output on the FIRST failure — losing it is
-  what made this unresolvable.
+- **Stability — RESOLVED (was logged UNRESOLVED above; that entry is superseded).**
+  The intermittent `1 failed | 475 passed` was hunted down by re-running with the
+  reporter output CAPTURED, and caught on the 4th run:
+  `fetch-upstream.test.ts > adds upstream remote when none exists`,
+  `Test timed out in 15000ms`. Not a mystery — the test let the script run a REAL
+  `git fetch` against https://github.com/qwibitai/nanoclaw.git, so its result depended
+  on how fast GitHub refused. Fixed by a git `insteadOf` rewrite onto the local bare
+  repo the suite already seeds. Network removed, not the timeout widened. 4/4 on three
+  consecutive runs. **Lesson: capture the reporter output on the FIRST failure** —
+  losing it is what made this look unresolvable for a whole session.
+
 - **Maintainability — fixed.** `format:check` was failing on 3 files
   (`src/db.ts`, `skills-engine/uninstall.ts`, `skills-engine/update.ts`) with
   pre-existing drift, unrelated to the migration. This went unnoticed because **this
