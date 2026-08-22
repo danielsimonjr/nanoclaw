@@ -213,19 +213,47 @@ describe('fetch-upstream.sh', () => {
       // No origin
     }
 
+    // Redirect the hardcoded github.com URL to the local bare repo for TRANSPORT
+    // only. This test used to let the script run a real `git fetch` against
+    // https://github.com/qwibitai/nanoclaw.git -- so its result depended on the
+    // network: fast when the fetch failed quickly, and past the 15s budget when it
+    // did not. It failed roughly 1 run in 7 with "Test timed out in 15000ms", which
+    // reads as flakiness but is a test doing real network I/O.
+    //
+    // NOTE: `git remote -v` reports the REWRITTEN url, so the assertion below reads
+    // the raw stored value with `git config --get` instead. That is the more precise
+    // check anyway -- it asserts what the script actually wrote into the config,
+    // rather than what git chooses to display after applying rewrites.
+    // execFileSync, not execSync: no shell, so a temp path containing a space
+    // cannot be word-split into a broken git config key.
+    execFileSync(
+      'git',
+      [
+        'config',
+        `url.${upstreamBareDir.replace(/\\/g, '/')}.insteadOf`,
+        'https://github.com/qwibitai/nanoclaw.git',
+      ],
+      { cwd: projectDir, stdio: 'pipe' },
+    );
+
     const { stdout } = runFetchUpstream();
 
-    // It will try to add upstream pointing to github (which will fail to fetch),
-    // but we can verify it attempted to add the remote
+    // Verify it attempted to add the remote.
     expect(stdout).toContain('Adding upstream');
 
-    // Verify the remote was added
-    const remotes = execSync('git remote -v', {
+    // Verify the remote was added, reading the RAW configured url.
+    const remotes = execSync('git remote', {
       cwd: projectDir,
       encoding: 'utf-8',
     });
     expect(remotes).toContain('upstream');
-    expect(remotes).toContain('qwibitai/nanoclaw');
+
+    const storedUrl = execFileSync(
+      'git',
+      ['config', '--get', 'remote.upstream.url'],
+      { cwd: projectDir, encoding: 'utf-8' },
+    );
+    expect(storedUrl).toContain('qwibitai/nanoclaw');
   });
 
   it('extracts files to temp dir correctly', () => {
