@@ -303,7 +303,8 @@ export async function applyUpdate(newCorePath: string): Promise<UpdateResult> {
 
     for (const skill of state.applied_skills) {
       const outcomes = skill.structured_outcomes as
-        Record<string, unknown> | undefined;
+        | Record<string, unknown>
+        | undefined;
       if (!outcomes) continue;
 
       if (outcomes.npm_dependencies) {
@@ -348,7 +349,8 @@ export async function applyUpdate(newCorePath: string): Promise<UpdateResult> {
 
     for (const skill of state.applied_skills) {
       const outcomes = skill.structured_outcomes as
-        Record<string, unknown> | undefined;
+        | Record<string, unknown>
+        | undefined;
       if (!outcomes?.test) continue;
 
       const testCmd = outcomes.test as string;

@@ -354,7 +354,8 @@ export function createTask(
 
 export function getTaskById(id: string): ScheduledTask | undefined {
   return db.prepare('SELECT * FROM scheduled_tasks WHERE id = ?').get(id) as
-    ScheduledTask | undefined;
+    | ScheduledTask
+    | undefined;
 }
 
 export function getTasksForGroup(groupFolder: string): ScheduledTask[] {
