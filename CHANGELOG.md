@@ -6,6 +6,22 @@ does not strictly follow semantic versioning (it is a personal fork).
 
 ## [Unreleased]
 
+### Fixed (2026-09-23)
+
+`scripts/rebuild-native.mjs`'s health check only detected a MISSING better-sqlite3, not one
+that is present and broken. `loads(pkg)` called plain `require(pkg)`, which resolves the JS
+wrapper without ever touching the native binding - better-sqlite3 compiles it lazily, inside
+the `Database` constructor. An ABI-mismatched addon (Node upgraded since install) or one that
+fails at lazy load therefore read as "loads" and the `postinstall`/`rebuild:native` scripts
+never ran an actual rebuild.
+
+`loads()` now opens a `:memory:` database and runs `SELECT 1` before declaring success,
+porting the fix already shipped in `@danielsimonjr/memoryjs`'s copy of this script. Proven
+with a `Module._load` stub that returns a `Database` class whose constructor throws until a
+fake rebuild runs: the OLD `loads()` reported "loads" against that stub and exited 0 having
+detected nothing; the fixed version reports the failure, rebuilds, and verifies the reload
+(`src/rebuild-native.test.ts`). Suite: 45 files / 477 tests, all passing.
+
 ### CI (2026-08-14)
 
 `Test` now gates `main` on `push`, not only on `pull_request`.
