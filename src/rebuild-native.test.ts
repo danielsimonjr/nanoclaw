@@ -17,7 +17,9 @@ describe('native installation probe', () => {
     const preload = join(dir, 'preload.cjs');
     try {
       // Exercise the real postinstall script, isolating the addon and npm command.
-      await writeFile(preload, `
+      await writeFile(
+        preload,
+        `
         const Module = require('node:module');
         const cp = require('node:child_process');
         const load = Module._load;
@@ -32,10 +34,13 @@ describe('native installation probe', () => {
         };
         cp.spawnSync = () => { rebuilt = true; console.log('probe-rebuild'); return { status: 0 }; };
         Module.syncBuiltinESMExports();
-      `);
-      const out = execFileSync(process.execPath,
+      `,
+      );
+      const out = execFileSync(
+        process.execPath,
         ['--require', preload, resolve('scripts/rebuild-native.mjs')],
-        { encoding: 'utf8', timeout: 10000 });
+        { encoding: 'utf8', timeout: 10000 },
+      );
       expect(out).toContain('Missing native binding');
       expect(out).toContain('probe-rebuild');
       expect(out).toContain('probe-query');
